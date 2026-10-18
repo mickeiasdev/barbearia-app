@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-stone-950 text-stone-200 antialiased;
+}
+
+::selection {
+  @apply bg-amber-500/80 text-stone-950;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-amber-500 text-stone-950 hover:bg-amber-400;
+  }
+  .btn-outline {
+    @apply border border-stone-700 bg-transparent text-stone-200 hover:border-amber-500/60 hover:text-amber-400;
+  }
+  .btn-danger {
+    @apply border border-red-900/70 bg-red-950/40 text-red-300 hover:border-red-700;
+  }
+  .btn-ghost {
+    @apply text-stone-400 hover:text-amber-400;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .input {
+    @apply w-full rounded-lg border border-stone-700 bg-stone-900 px-3 py-2.5 text-sm text-stone-100 placeholder:text-stone-600 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500/30;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-stone-400;
+  }
+  .card {
+    @apply rounded-2xl border border-stone-800/80 bg-stone-900/50;
+  }
+  .section-title {
+    @apply font-serif text-2xl font-bold uppercase tracking-tight text-stone-100 md:text-3xl;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium;
+  }
+  .table-head {
+    @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-stone-500;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-stone-300;
+  }
+  .error-box {
+    @apply rounded-lg border border-red-900/60 bg-red-950/40 px-4 py-3 text-sm text-red-300;
+  }
+  .ok-box {
+    @apply rounded-lg border border-emerald-800/60 bg-emerald-950/40 px-4 py-3 text-sm text-emerald-300;
+  }
+}
+
+/* Padrão de fundo sutil (linhas diagonais) para o hero */
+.hero-pattern {
+  background-image:
+    radial-gradient(ellipse 60% 50% at 50% -10%, rgba(245, 158, 11, 0.14), transparent),
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 100% 100%, 44px 44px, 44px 44px;
+}

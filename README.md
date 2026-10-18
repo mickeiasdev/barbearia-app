@@ -1,0 +1,200 @@
+# 💈 BarberPro — Sistema completo para barbearias
+
+![Next.js](https://img.shields.io/badge/Next.js%2015-black?logo=nextdotjs) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind%20CSS-06B6D4?logo=tailwindcss&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000?logo=vercel) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+
+Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + venda de produtos (loja online e PDV) + painel administrativo completo**, com **vários barbeiros por estabelecimento**. Pronta para deploy no **Vercel** com **Supabase** (Postgres + Auth + RLS).
+
+> Feita para o mercado brasileiro: preços em R$, fuso America/Sao_Paulo, pagamento no local (Pix/dinheiro/cartão) e botão de WhatsApp.
+
+---
+
+## ✨ Funcionalidades
+
+### 👤 Área do cliente
+| Recurso | Detalhe |
+|---|---|
+| Home, Serviços, Barbeiros e Loja | Páginas públicas com dados reais do estabelecimento |
+| Agendamento em 4 passos | Serviço → Barbeiro → Dia → Hora, com horários calculados em tempo real |
+| Anti-conflito à prova de corrida | Constraint no Postgres impede dois agendamentos do mesmo barbeiro no mesmo horário |
+| Carrinho + checkout | Respeita estoque; baixa automática e atômica no banco (função `place_order`) |
+| Minha conta | Próximos agendamentos, histórico, meus pedidos, cancelamento e edição de perfil |
+| Cadastro/Login | E-mail + senha via Supabase Auth |
+| WhatsApp flutuante | Usa o número cadastrado pela barbearia |
+
+### 🛠 Painel admin (`/admin`)
+| Recurso | Detalhe |
+|---|---|
+| Dashboard | KPIs do dia/mês (agendamentos, pendências, receita, estoque baixo), agenda do dia com ações rápidas e top serviços |
+| Agendamentos | Filtros por dia/barbeiro/status; confirmar, concluir e cancelar; **novo agendamento manual** (telefone/balcão) com horários livres em tempo real |
+| Barbeiros | CRUD completo, comissão, foto, bio, **login vinculado**, serviços que executa e **escala semanal com até 2 janelas por dia** |
+| Serviços | CRUD com preço e duração (alimentam o agendamento) |
+| Produtos | CRUD com estoque, categoria e imagem; destaque de estoque baixo |
+| Vendas (PDV) | Lançamento rápido de vendas no balcão (avulsa ou vinculada ao cliente) com baixa de estoque + histórico de pedidos |
+| Configurações | Dados da barbearia (endereço, telefone, horários, intervalo entre encaixes) + guia de promoção de admins |
+
+---
+
+## 🛠 Stack
+
+- **Next.js 15** (App Router, Server Components, Server Actions) + **TypeScript**
+- **Supabase** — Postgres, Auth (e-mail/senha), RLS e funções RPC
+- **Tailwind CSS** (tema escuro premium âmbar/grafite)
+- **Vercel** — deploy com 1 clique
+
+## 🗄 Modelo de dados
+
+```mermaid
+erDiagram
+    PROFILES ||--o{ APPOINTMENTS : "faz"
+    PROFILES ||--o{ ORDERS : "compra"
+    BARBERS ||--o{ APPOINTMENTS : "executa"
+    SERVICES ||--o{ APPOINTMENTS : "servico de"
+    ESTABLISHMENTS ||--o{ BARBERS : "possui"
+    ESTABLISHMENTS ||--o{ SERVICES : "oferece"
+    ESTABLISHMENTS ||--o{ PRODUCTS : "vende"
+    BARBERS }o--o{ SERVICES : "barber_services"
+    BARBERS ||--o{ BARBER_SCHEDULES : "escala"
+    ORDERS ||--o{ ORDER_ITEMS : "contem"
+    PRODUCTS ||--o{ ORDER_ITEMS : "item"
+    APPOINTMENTS |o--o| ORDERS : "opcional"
+
+    PROFILES { uuid id text full_name text role }
+    ESTABLISHMENTS { uuid id text name time opening_time time closing_time }
+    BARBERS { uuid id uuid establishment_id uuid profile_id numeric commission_pct bool is_active }
+    SERVICES { uuid id text name int price_cents int duration_min }
+    BARBER_SCHEDULES { uuid id int weekday time start_time time end_time }
+    PRODUCTS { uuid id text name int price_cents int stock }
+    APPOINTMENTS { uuid id timestamptz starts_at timestamptz ends_at text status }
+    ORDERS { uuid id int total_cents text payment_method }
+    ORDER_ITEMS { uuid id text product_name int quantity }
+```
+
+**Segurança (RLS):** cada papel só faz o que deve —
+
+| Tabela | Visitante | Cliente | Admin |
+|---|---|---|---|
+| serviços, barbeiros, produtos, escalas | lê ativos | lê ativos | tudo |
+| agendamentos | — | cria/cancela os próprios | tudo |
+| pedidos | — | vê os próprios (checkout via RPC segura) | tudo |
+| perfis | — | edita o próprio (sem mudar papel) | tudo |
+
+Funções e guardas no banco:
+- `get_available_slots(barbeiro, data, duracao)` — cruza escala × agendamentos ativos, fuso SP;
+- `place_order(itens, cliente, pagamento)` — valida estoque, baixa e cria o pedido numa única transação;
+- `appointments_no_overlap` — constraint de exclusão que impede agendamento duplicado mesmo sob concorrência;
+- trigger de cadastro cria o perfil automaticamente e promove a **admin** quem estiver em `admin_emails`.
+
+---
+
+## 🚀 Colocando no ar (guia completo)
+
+### 1. Criar o projeto no Supabase
+1. Acesse [supabase.com](https://supabase.com) → **New project**;
+2. Escolha região e senha do banco (a senha não é usada pelo app);
+3. Aguarde provisionar.
+
+### 2. Rodar o schema SQL
+- No painel do Supabase abra **SQL Editor** → **New query**;
+- Cole TODO o conteúdo de [`supabase/migrations/0001_schema.sql`](supabase/migrations/0001_schema.sql) → **Run**;
+- (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
+
+### 3. Promover você a administrador
+Escolha UMA das opções (rode no SQL Editor):
+
+- **Antes de se cadastrar:**
+
+```sql
+insert into public.admin_emails (email) values ('seu-email@exemplo.com');
+```
+
+  Depois de se cadastrar no site com esse e-mail, a conta já nasce admin.
+
+- **Conta já existente:**
+
+```sql
+update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
+```
+
+### 4. Facilitar o login em desenvolvimento
+Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
+
+### 5. Rodar localmente
+
+```bash
+# instale as dependências
+npm install
+
+# configure as variáveis
+cp .env.example .env.local
+# ...edite .env.local com a URL e a chave anon do seu projeto (Settings -> API)
+
+# suba o servidor
+npm run dev
+```
+
+Abra [http://localhost:3000](http://localhost:3000).
+
+### 6. Deploy no Vercel
+1. Suba este repositório para o GitHub;
+2. No [vercel.com](https://vercel.com) → **Add New Project** → importe o repo;
+3. Adicione as variáveis de ambiente:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_APP_NAME` (opcional) e `NEXT_PUBLIC_SITE_URL` (URL final, para o sitemap)
+4. **Deploy** — pronto. O `vercel.json` já está incluído.
+
+> 💡 Dica: instale a integração **Supabase for Vercel** no marketplace do Vercel — ela injeta as variáveis automaticamente.
+
+### 7. Configurar a barbearia
+Acesse `/admin/configuracoes`, preencha os dados da barbearia e cadastre **Barbeiros** (escala semanal + serviços), **Serviços** e **Produtos**. O site reflete tudo em tempo real.
+
+---
+
+## 📁 Estrutura do projeto
+
+```text
+app/
+├── (public)/          # área do cliente
+│   ├── page.tsx       # home
+│   ├── servicos/      # lista de serviços
+│   ├── barbeiros/     # equipe
+│   ├── loja/          # produtos
+│   ├── carrinho/      # checkout
+│   ├── agendar/       # wizard de agendamento (4 passos)
+│   ├── entrar/ | registrar/
+│   └── minha-conta/   # agendamentos + pedidos + perfil
+├── admin/             # painel administrativo (protegido)
+│   ├── page.tsx       # dashboard
+│   ├── agendamentos/  # filtros + ações + novo manual
+│   ├── barbeiros/     # CRUD + escala semanal
+│   ├── servicos/      # CRUD
+│   ├── produtos/      # CRUD + estoque
+│   ├── vendas/        # PDV + histórico
+│   └── configuracoes/ # barbearia + guia de admins
+├── actions/           # server actions (auth, booking, orders, admin)
+├── components/        # UI (carrinho, wizard, formulários, badges...)
+├── lib/               # supabase clients, tipos, timezone SP, utils
+└── supabase/
+    ├── migrations/0001_schema.sql   # schema + RLS + funções
+    └── seed.sql                     # dados demo (opcional)
+```
+
+## ⚙️ Detalhes técnicos
+
+- **Fuso fixo America/Sao_Paulo (UTC-3):** escala, slots e exibição usam este fuso — sem depender do fuso do servidor;
+- **Carrinho:** persistido em `localStorage`; a validação de verdade (estoque/preço) acontece na função `place_order`, no banco;
+- **Sem service_role no app:** o site usa apenas a chave **anon** — toda escrita passa por RLS ou RPC segura;
+- **Preços em centavos (inteiros)** para evitar erros de ponto flutuante;
+- **SEO:** `robots.txt`, `sitemap.xml` e manifest incluídos.
+
+## 🗺 Roadmap (ideias)
+
+- [ ] Portal do barbeiro (agenda própria com o login vinculado)
+- [ ] Notificações (e-mail/WhatsApp) de confirmação e lembrete
+- [ ] Pagamento online real (Stripe/Mercado Pago) com webhook
+- [ ] Upload de imagens via Supabase Storage
+- [ ] Multi-estabelecimento com seleção por subdomínio
+
+## 📄 Licença
+
+MIT — veja o arquivo [LICENSE](LICENSE).
