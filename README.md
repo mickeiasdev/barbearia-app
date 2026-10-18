@@ -212,7 +212,7 @@ app/
 - **Sem service_role no app:** o site usa apenas a chave **anon** — toda escrita passa por RLS ou RPC segura;
 - **Preços em centavos (inteiros)** para evitar erros de ponto flutuante;
 - **SEO:** `robots.txt`, `sitemap.xml` e manifest incluídos.
-- **Pix nativo:** o "copia e cola" é montado localmente ([`lib/pix.ts`](lib/pix.ts), padrão EMV + CRC16) com a chave Pix da barbearia — o dinheiro cai direto na conta do estabelecimento, sem gateway e sem taxa por transação.
+- **Pix nativo:** o "copia e cola" é montado localmente ([`lib/pix.ts`](lib/pix.ts), padrão EMV + CRC16 verificado contra o vetor oficial) com a chave Pix da barbearia — sem gateway e sem taxa. O QR Code é gerado **no servidor** ([`lib/qr.ts`](lib/qr.ts)) e enviado pronto ao navegador.
 - **Uploads:** imagens de produtos/barbeiros vão para o bucket público `media` do Supabase Storage; apenas admins podem gravar (policies RLS na migration 0003).
 
 ## 🗺 Roadmap (ideias)

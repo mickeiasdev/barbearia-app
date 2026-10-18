@@ -9,12 +9,7 @@ import { placeOrderAction, type PlaceOrderState } from '@/actions/orders'
 import PixCard from '@/components/pix-card'
 import { formatBRL } from '@/lib/utils'
 
-interface CartViewProps {
-  pixKey?: string | null
-  merchantName?: string | null
-}
-
-export default function CartView({ pixKey, merchantName }: CartViewProps) {
+export default function CartView() {
   const { items, setQty, remove, clear, totalCents, mounted } = useCart()
   const [state, formAction, isPending] = useActionState<PlaceOrderState, FormData>(
     placeOrderAction,
@@ -58,18 +53,17 @@ export default function CartView({ pixKey, merchantName }: CartViewProps) {
           </div>
         </div>
 
-        {pixKey && state.totalCents ? (
+        {state.pix ? (
           <PixCard
-            pixKey={pixKey}
-            amountCents={state.totalCents}
-            merchantName={merchantName ?? undefined}
-            txid={'PED' + state.orderId.replace(/-/g, '').slice(0, 14)}
+            payload={state.pix.payload}
+            qrDataUrl={state.pix.qrDataUrl}
+            amountCents={state.totalCents ?? 0}
             defaultOpen
             note="Após pagar, mostre o comprovante na retirada dos produtos."
           />
         ) : (
           <p className="text-center text-xs text-stone-600">
-            O pagamento também pode ser feito na retirada, direto na barbearia.
+            O pagamento pode ser feito na retirada, direto na barbearia.
           </p>
         )}
       </div>

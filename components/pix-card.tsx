@@ -1,52 +1,27 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Check, Copy, QrCode } from 'lucide-react'
-import { buildPixPayload } from '@/lib/pix'
 import { formatBRL } from '@/lib/utils'
 
 interface Props {
-  pixKey: string
+  /** Payload "copia e cola" já validado (gerado no servidor) */
+  payload: string
+  /** QR Code como data URL (gerado no servidor) — null se falhar */
+  qrDataUrl: string | null
   amountCents: number
-  merchantName?: string
-  txid?: string
   defaultOpen?: boolean
   note?: string
 }
 
 export default function PixCard({
-  pixKey,
+  payload,
+  qrDataUrl,
   amountCents,
-  merchantName,
-  txid,
   defaultOpen = false,
   note,
 }: Props) {
-  const [qr, setQr] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-
-  const payload = buildPixPayload({ key: pixKey, amountCents, merchantName, txid })
-
-  useEffect(() => {
-    if (!payload) return
-    let active = true
-    import('qrcode')
-      .then((mod) => {
-        const toDataURL = mod.default?.toDataURL ?? mod.toDataURL
-        return toDataURL(payload, {
-          margin: 1,
-          width: 220,
-          color: { dark: '#0c0a09', light: '#ffffff' },
-        })
-      })
-      .then((url) => {
-        if (active) setQr(url)
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [payload])
 
   if (!payload) return null
 
@@ -74,12 +49,12 @@ export default function PixCard({
 
       <div className="grid gap-4 border-t border-stone-800/80 p-4 sm:grid-cols-[auto_1fr] sm:items-center">
         <div className="mx-auto w-[220px] rounded-xl bg-white p-2">
-          {qr ? (
+          {qrDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={qr} alt="QR Code Pix" width={220} height={220} />
+            <img src={qrDataUrl} alt="QR Code Pix" width={220} height={220} />
           ) : (
-            <div className="flex h-[220px] items-center justify-center text-xs text-stone-500">
-              Gerando QR Code...
+            <div className="flex h-[220px] items-center justify-center px-3 text-center text-xs text-stone-500">
+              QR indisponível — use o código copia e cola ao lado.
             </div>
           )}
         </div>

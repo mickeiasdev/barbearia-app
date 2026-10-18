@@ -4,11 +4,15 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { friendlyDbError, formatBRL, PAYMENT_LABEL } from '@/lib/utils'
 import { sendEmail, emailHtml } from '@/lib/email'
+import { getEstablishment } from '@/lib/data'
+import { buildPixPayload } from '@/lib/pix'
+import { qrFromPayload } from '@/lib/qr'
 
 export interface PlaceOrderState {
   error?: string
   orderId?: string
   totalCents?: number
+  pix?: { payload: string; qrDataUrl: string | null } | null
 }
 
 interface RpcItem {
@@ -78,5 +82,20 @@ export async function placeOrderAction(
     )
   )
 
-  return { orderId: String(data), totalCents }
+  // Pix do pedido: payload + QR gerados no SERVIDOR (rápido e confiável)
+  const establishment = await getEstablishment()
+  let pix: PlaceOrderState['pix'] = null
+  if (establishment?.pix_key && totalCents > 0) {
+    const payload = buildPixPayload({
+      key: establishment.pix_key,
+      amountCents: totalCents,
+      merchantName: establishment.name,
+      txid: 'PED' + String(data).replace(/-/g, '').slice(0, 14),
+    })
+    if (payload) {
+      pix = { payload, qrDataUrl: await qrFromPayload(payload) }
+    }
+  }
+
+  return { orderId: String(data), totalCents, pix }
 }

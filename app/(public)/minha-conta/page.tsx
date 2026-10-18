@@ -4,6 +4,8 @@ import { Calendar, CalendarClock, KeyRound, Package, Receipt, User } from 'lucid
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser, getEstablishment } from '@/lib/data'
 import PixCard from '@/components/pix-card'
+import { buildPixPayload } from '@/lib/pix'
+import { qrFromPayload } from '@/lib/qr'
 import { formatBRL, formatDuration, PAYMENT_LABEL } from '@/lib/utils'
 import { dateKey, shortDateLabel, timeInSP } from '@/lib/tz'
 import StatusBadge from '@/components/status-badge'
@@ -67,6 +69,33 @@ export default async function MinhaContaPage({
   const upcoming = (upcomingData ?? []) as unknown as AppointmentDetails[]
   const history = (historyData ?? []) as unknown as AppointmentDetails[]
   const orders = (ordersData ?? []) as unknown as OrderWithItems[]
+
+  // QR Pix de agendamentos e pedidos — gerado no SERVIDOR (não depende do navegador)
+  const pixByAppt = new Map<string, { payload: string; qrDataUrl: string | null }>()
+  const pixByOrder = new Map<string, { payload: string; qrDataUrl: string | null }>()
+  if (establishment?.pix_key) {
+    const pixFor = async (amountCents: number, txid: string) => {
+      const payload = buildPixPayload({
+        key: establishment!.pix_key!,
+        amountCents,
+        merchantName: establishment!.name,
+        txid,
+      })
+      if (!payload) return null
+      return { payload, qrDataUrl: await qrFromPayload(payload) }
+    }
+
+    await Promise.all([
+      ...upcoming.map(async (a) => {
+        const p = await pixFor(a.price_cents, 'AG' + a.id.replace(/-/g, '').slice(0, 14))
+        if (p) pixByAppt.set(a.id, p)
+      }),
+      ...orders.map(async (o) => {
+        const p = await pixFor(o.total_cents, 'PED' + o.id.replace(/-/g, '').slice(0, 14))
+        if (p) pixByOrder.set(o.id, p)
+      }),
+    ])
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
@@ -156,12 +185,11 @@ export default async function MinhaContaPage({
                     <CancelAppointmentButton id={appt.id} />
                   </div>
                 </div>
-                {establishment?.pix_key && (
+                {pixByAppt.get(appt.id) && (
                   <PixCard
-                    pixKey={establishment.pix_key}
+                    payload={pixByAppt.get(appt.id)!.payload}
+                    qrDataUrl={pixByAppt.get(appt.id)!.qrDataUrl}
                     amountCents={appt.price_cents}
-                    merchantName={establishment.name}
-                    txid={'AG' + appt.id.replace(/-/g, '').slice(0, 14)}
                     note="Após pagar, mostre o comprovante ao barbeiro no dia do atendimento."
                   />
                 )}
@@ -238,13 +266,12 @@ export default async function MinhaContaPage({
                         </li>
                       ))}
                     </ul>
-                    {establishment?.pix_key && (
+                    {pixByOrder.get(order.id) && (
                       <div className="mt-3">
                         <PixCard
-                          pixKey={establishment.pix_key}
+                          payload={pixByOrder.get(order.id)!.payload}
+                          qrDataUrl={pixByOrder.get(order.id)!.qrDataUrl}
                           amountCents={order.total_cents}
-                          merchantName={establishment.name}
-                          txid={'PED' + order.id.replace(/-/g, '').slice(0, 14)}
                         />
                       </div>
                     )}
