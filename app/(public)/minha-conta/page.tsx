@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Calendar, CalendarClock, KeyRound, Package, Receipt, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentUser } from '@/lib/data'
+import { getCurrentUser, getEstablishment } from '@/lib/data'
+import PixCard from '@/components/pix-card'
 import { formatBRL, formatDuration, PAYMENT_LABEL } from '@/lib/utils'
 import { dateKey, shortDateLabel, timeInSP } from '@/lib/tz'
 import StatusBadge from '@/components/status-badge'
@@ -24,6 +25,7 @@ export default async function MinhaContaPage({
 }) {
   const sp = await searchParams
   const user = await getCurrentUser()
+  const establishment = await getEstablishment()
 
   if (!user) {
     return (
@@ -118,7 +120,8 @@ export default async function MinhaContaPage({
 
             <div className="space-y-3">
               {upcoming.map((appt) => (
-                <div key={appt.id} className="card grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
+                <div key={appt.id} className="space-y-3">
+                <div className="card grid gap-4 p-5 sm:grid-cols-[1fr_auto]">
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <p className="font-semibold text-stone-100">
@@ -153,6 +156,16 @@ export default async function MinhaContaPage({
                     <CancelAppointmentButton id={appt.id} />
                   </div>
                 </div>
+                {establishment?.pix_key && (
+                  <PixCard
+                    pixKey={establishment.pix_key}
+                    amountCents={appt.price_cents}
+                    merchantName={establishment.name}
+                    txid={'AG' + appt.id.replace(/-/g, '').slice(0, 14)}
+                    note="Após pagar, mostre o comprovante ao barbeiro no dia do atendimento."
+                  />
+                )}
+              </div>
               ))}
             </div>
           </section>
@@ -225,6 +238,16 @@ export default async function MinhaContaPage({
                         </li>
                       ))}
                     </ul>
+                    {establishment?.pix_key && (
+                      <div className="mt-3">
+                        <PixCard
+                          pixKey={establishment.pix_key}
+                          amountCents={order.total_cents}
+                          merchantName={establishment.name}
+                          txid={'PED' + order.id.replace(/-/g, '').slice(0, 14)}
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

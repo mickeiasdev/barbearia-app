@@ -89,6 +89,25 @@ export default function BarberForm({
             placeholder="https://..."
           />
         </div>
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor={'photo-file-' + (barber?.id ?? 'new')}>
+            …ou envie uma foto do computador (JPG/PNG/WebP, máx. 4MB)
+          </label>
+          <input
+            id={'photo-file-' + (barber?.id ?? 'new')}
+            name="photo_file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="input file:mr-3 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-950"
+          />
+          {barber?.photo_url && (
+            <p className="mt-2 flex items-center gap-2 text-xs text-stone-600">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={barber.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+              Foto atual — envie outra para substituir.
+            </p>
+          )}
+        </div>
         <div>
           <label className="label" htmlFor={'profile-' + (barber?.id ?? 'new')}>
             Login vinculado (opcional)

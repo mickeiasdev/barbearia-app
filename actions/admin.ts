@@ -5,8 +5,33 @@ import { requireAdminAction, getEstablishment } from '@/lib/data'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { friendlyDbError, parsePriceToCents } from '@/lib/utils'
-import { spDateTimeToUTC } from '@/lib/tz'
+import { dayTimeLabel, shortDateLabel, spDateTimeToUTC } from '@/lib/tz'
+import { sendEmail, emailHtml } from '@/lib/email'
 import type { Barber, Establishment, Service } from '@/lib/types'
+
+/** Envia uma imagem para o bucket público "media" e devolve a URL. */
+async function uploadImage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  file: File,
+  folder: string
+): Promise<{ url: string } | { error: string }> {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    return { error: 'Formato de imagem inválido (use JPG, PNG ou WebP).' }
+  }
+  if (file.size > 4 * 1024 * 1024) {
+    return { error: 'Imagem muito grande (máximo 4MB).' }
+  }
+  const ext = file.type === 'image/jpeg' ? 'jpg' : file.type.split('/')[1]
+  const path = folder + '/' + crypto.randomUUID() + '.' + ext
+  const { error } = await supabase.storage
+    .from('media')
+    .upload(path, file, { contentType: file.type })
+  if (error) {
+    return { error: 'Falha no upload da imagem: ' + error.message }
+  }
+  const { data } = supabase.storage.from('media').getPublicUrl(path)
+  return { url: data.publicUrl }
+}
 
 export interface AdminFormState {
   error?: string
@@ -46,6 +71,7 @@ export async function saveEstablishmentAction(
     phone,
     whatsapp,
     instagram,
+    pix_key: String(formData.get('pix_key') ?? '').trim() || null,
     opening_time: openingTime,
     closing_time: closingTime,
     slot_step_min: step,
@@ -79,7 +105,7 @@ export async function saveBarberAction(
   const id = String(formData.get('id') ?? '').trim() || null
   const fullName = String(formData.get('full_name') ?? '').trim()
   const bio = String(formData.get('bio') ?? '').trim() || null
-  const photoUrl = String(formData.get('photo_url') ?? '').trim() || null
+  let photoUrl = String(formData.get('photo_url') ?? '').trim() || null
   const commission = Number(formData.get('commission_pct') ?? 0)
   const isActive = formData.get('is_active') !== null
   const profileId = String(formData.get('profile_id') ?? '').trim() || null
@@ -88,6 +114,14 @@ export async function saveBarberAction(
   if (!fullName) return { error: 'Informe o nome do barbeiro.' }
   if (!Number.isFinite(commission) || commission < 0 || commission > 100) {
     return { error: 'A comissão deve estar entre 0 e 100%.' }
+  }
+
+  // upload de foto direto do computador (Supabase Storage)
+  const photoFile = formData.get('photo_file')
+  if (photoFile instanceof File && photoFile.size > 0) {
+    const uploaded = await uploadImage(supabase, photoFile, 'barbers')
+    if ('error' in uploaded) return { error: uploaded.error }
+    photoUrl = uploaded.url
   }
 
   const values = {
@@ -290,7 +324,7 @@ export async function saveProductAction(
   const name = String(formData.get('name') ?? '').trim()
   const description = String(formData.get('description') ?? '').trim() || null
   const category = String(formData.get('category') ?? '').trim() || null
-  const imageUrl = String(formData.get('image_url') ?? '').trim() || null
+  let imageUrl = String(formData.get('image_url') ?? '').trim() || null
   const priceCents = parsePriceToCents(String(formData.get('price') ?? ''))
   const stock = parseInt(String(formData.get('stock') ?? '0'), 10)
   const isActive = formData.get('is_active') !== null
@@ -298,6 +332,14 @@ export async function saveProductAction(
   if (!name) return { error: 'Informe o nome do produto.' }
   if (priceCents === null) return { error: 'Preço inválido. Use o formato 45,90.' }
   if (!Number.isInteger(stock) || stock < 0) return { error: 'Estoque inválido.' }
+
+  // upload de imagem direto do computador (Supabase Storage)
+  const imageFile = formData.get('image_file')
+  if (imageFile instanceof File && imageFile.size > 0) {
+    const uploaded = await uploadImage(supabase, imageFile, 'products')
+    if ('error' in uploaded) return { error: uploaded.error }
+    imageUrl = uploaded.url
+  }
 
   const values = {
     name,
@@ -366,9 +408,68 @@ export async function setAppointmentStatusAction(formData: FormData) {
     redirect(back + (back.includes('?') ? '&' : '?') + 'erro=' + encodeURIComponent('Status inválido.'))
   }
 
+  // dados para o e-mail ao cliente (busca antes da alteração)
+  const { data: apptData } = await supabase
+    .from('appointments')
+    .select(
+      'starts_at, client:profiles!appointments_client_id_fkey(email, full_name), service:services(name), barber:barbers(full_name)'
+    )
+    .eq('id', id)
+    .maybeSingle()
+  const appt = apptData as unknown as
+    | {
+        starts_at: string
+        client: { email: string | null; full_name: string } | null
+        service: { name: string } | null
+        barber: { full_name: string } | null
+      }
+    | null
+
   const { error } = await supabase.from('appointments').update({ status }).eq('id', id)
   if (error) {
     redirect(back + (back.includes('?') ? '&' : '?') + 'erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+
+  // notifica o cliente conforme o novo status
+  if (appt?.client?.email) {
+    const resumo =
+      (appt.service?.name ?? 'atendimento') +
+      ' com ' +
+      (appt.barber?.full_name ?? 'nosso barbeiro') +
+      ' — ' +
+      dayTimeLabel(appt.starts_at)
+
+    if (status === 'confirmed') {
+      await sendEmail(
+        appt.client.email,
+        'Agendamento confirmado ✔',
+        emailHtml('Agendamento confirmado!', [
+          'Seu atendimento foi <strong>confirmado</strong>:',
+          '<strong>' + resumo + '</strong>',
+          'Até lá! Se precisar reagendar ou cancelar, é só entrar em Minha Conta.',
+        ])
+      )
+    } else if (status === 'cancelled') {
+      await sendEmail(
+        appt.client.email,
+        'Agendamento cancelado',
+        emailHtml('Agendamento cancelado', [
+          'Seu atendimento foi cancelado pela barbearia:',
+          resumo,
+          'Quer remarcar? Escolha um novo horário no site quando quiser.',
+        ])
+      )
+    } else if (status === 'completed') {
+      await sendEmail(
+        appt.client.email,
+        'Atendimento concluído — obrigado!',
+        emailHtml('Obrigado pela visita!', [
+          'Seu atendimento foi concluído:',
+          resumo,
+          'Esperamos você de volta em breve! Já pode agendar o próximo corte no site.',
+        ])
+      )
+    }
   }
 
   revalidatePath('/admin/agendamentos')
@@ -396,7 +497,7 @@ export async function adminCreateAppointmentAction(
 
   const { data: client } = await supabase
     .from('profiles')
-    .select('id')
+    .select('id, email, full_name')
     .eq('id', clientId)
     .maybeSingle()
   if (!client) return { error: 'Cliente não encontrado.' }
@@ -445,6 +546,25 @@ export async function adminCreateAppointmentAction(
     status: 'confirmed',
   })
   if (error) return { error: friendlyDbError(error.message) }
+
+  // avisa o cliente que a barbearia criou o atendimento para ele
+  const clientRow = client as { email: string | null; full_name: string } | null
+  if (clientRow?.email) {
+    await sendEmail(
+      clientRow.email,
+      'Agendamento criado para você',
+      emailHtml(
+        'Um agendamento foi criado para você!',
+        [
+          'A barbearia agendou um atendimento no seu nome:',
+          '<strong>' + svc.name + '</strong> com ' + brb.full_name,
+          '<strong>' + shortDateLabel(dateKey) + ' às ' + time + '</strong> (horário de Brasília)',
+          'Já está <strong>confirmado</strong> — pagamento no local ou por Pix.',
+        ],
+        'Detalhes em Minha Conta no site.'
+      )
+    )
+  }
 
   revalidatePath('/admin/agendamentos')
   revalidatePath('/admin')

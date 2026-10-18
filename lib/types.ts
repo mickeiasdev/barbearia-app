@@ -18,6 +18,7 @@ export interface Establishment {
   phone: string | null
   whatsapp: string | null
   instagram: string | null
+  pix_key: string | null
   opening_time: string
   closing_time: string
   slot_step_min: number

@@ -2,11 +2,13 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { friendlyDbError } from '@/lib/utils'
+import { friendlyDbError, formatBRL, PAYMENT_LABEL } from '@/lib/utils'
+import { sendEmail, emailHtml } from '@/lib/email'
 
 export interface PlaceOrderState {
   error?: string
   orderId?: string
+  totalCents?: number
 }
 
 interface RpcItem {
@@ -54,5 +56,27 @@ export async function placeOrderAction(
   revalidatePath('/minha-conta')
   revalidatePath('/loja')
 
-  return { orderId: String(data) }
+  // total real calculado no banco + e-mail de confirmação
+  const { data: order } = await supabase
+    .from('orders')
+    .select('total_cents')
+    .eq('id', String(data))
+    .maybeSingle()
+  const totalCents = (order as { total_cents: number } | null)?.total_cents ?? 0
+
+  await sendEmail(
+    auth.user.email,
+    'Pedido confirmado',
+    emailHtml(
+      'Pedido confirmado!',
+      [
+        'Recebemos seu pedido <strong>#' + String(data).slice(0, 8) + '</strong>.',
+        'Total: <strong>' + formatBRL(totalCents) + '</strong> (' + PAYMENT_LABEL[paymentMethod] + ').',
+        'A retirada é na barbearia — você pode pagar por Pix (gerado na tela de confirmação) ou no local.',
+      ],
+      'Acompanhe seus pedidos em Minha Conta no site.'
+    )
+  )
+
+  return { orderId: String(data), totalCents }
 }

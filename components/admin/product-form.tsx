@@ -65,6 +65,25 @@ export default function ProductForm({ product }: { product: Product | null }) {
             placeholder="https://..."
           />
         </div>
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor={'prod-file-' + key}>
+            …ou envie uma imagem do computador (JPG/PNG/WebP, máx. 4MB)
+          </label>
+          <input
+            id={'prod-file-' + key}
+            name="image_file"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="input file:mr-3 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-950"
+          />
+          {product?.image_url && (
+            <p className="mt-2 flex items-center gap-2 text-xs text-stone-600">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={product.image_url} alt="" className="h-10 w-10 rounded object-cover" />
+              Imagem atual — envie outra para substituir.
+            </p>
+          )}
+        </div>
         <div>
           <label className="label" htmlFor={'prod-price-' + key}>Preço (R$) *</label>
           <input

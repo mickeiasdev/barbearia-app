@@ -6,9 +6,15 @@ import { useActionState } from 'react'
 import { Banknote, CheckCircle, CreditCard, Minus, Plus, QrCode, ShoppingBag, Trash2 } from 'lucide-react'
 import { useCart } from '@/components/cart-provider'
 import { placeOrderAction, type PlaceOrderState } from '@/actions/orders'
+import PixCard from '@/components/pix-card'
 import { formatBRL } from '@/lib/utils'
 
-export default function CartView() {
+interface CartViewProps {
+  pixKey?: string | null
+  merchantName?: string | null
+}
+
+export default function CartView({ pixKey, merchantName }: CartViewProps) {
   const { items, setQty, remove, clear, totalCents, mounted } = useCart()
   const [state, formAction, isPending] = useActionState<PlaceOrderState, FormData>(
     placeOrderAction,
@@ -27,26 +33,45 @@ export default function CartView() {
   // ===== sucesso =====
   if (state.orderId && clearedRef.current === state.orderId) {
     return (
-      <div className="card mx-auto max-w-md p-10 text-center">
-        <CheckCircle className="mx-auto h-14 w-14 text-emerald-400" />
-        <h2 className="mt-4 font-serif text-2xl font-bold uppercase tracking-tight text-stone-100">
-          Pedido confirmado!
-        </h2>
-        <p className="mt-2 text-sm text-stone-500">
-          Número do pedido:{' '}
-          <span className="font-mono text-amber-400">{state.orderId.slice(0, 8)}</span>
-        </p>
-        <p className="mt-1 text-sm text-stone-500">
-          O pagamento é feito na retirada, direto na barbearia.
-        </p>
-        <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-          <Link href="/minha-conta" className="btn btn-primary">
-            Ver meus pedidos
-          </Link>
-          <Link href="/loja" className="btn btn-outline">
-            Continuar comprando
-          </Link>
+      <div className="mx-auto max-w-md space-y-4">
+        <div className="card p-10 text-center">
+          <CheckCircle className="mx-auto h-14 w-14 text-emerald-400" />
+          <h2 className="mt-4 font-serif text-2xl font-bold uppercase tracking-tight text-stone-100">
+            Pedido confirmado!
+          </h2>
+          <p className="mt-2 text-sm text-stone-500">
+            Número do pedido:{' '}
+            <span className="font-mono text-amber-400">{state.orderId.slice(0, 8)}</span>
+          </p>
+          {state.totalCents ? (
+            <p className="mt-1 text-sm text-stone-500">
+              Total: <span className="font-bold text-stone-200">{formatBRL(state.totalCents)}</span>
+            </p>
+          ) : null}
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/minha-conta" className="btn btn-primary">
+              Ver meus pedidos
+            </Link>
+            <Link href="/loja" className="btn btn-outline">
+              Continuar comprando
+            </Link>
+          </div>
         </div>
+
+        {pixKey && state.totalCents ? (
+          <PixCard
+            pixKey={pixKey}
+            amountCents={state.totalCents}
+            merchantName={merchantName ?? undefined}
+            txid={'PED' + state.orderId.replace(/-/g, '').slice(0, 14)}
+            defaultOpen
+            note="Após pagar, mostre o comprovante na retirada dos produtos."
+          />
+        ) : (
+          <p className="text-center text-xs text-stone-600">
+            O pagamento também pode ser feito na retirada, direto na barbearia.
+          </p>
+        )}
       </div>
     )
   }

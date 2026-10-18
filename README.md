@@ -17,6 +17,8 @@ Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + v
 | Agendamento em 4 passos | Serviço → Barbeiro → Dia → Hora, com horários calculados em tempo real |
 | Anti-conflito à prova de corrida | Constraint no Postgres impede dois agendamentos do mesmo barbeiro no mesmo horário |
 | Carrinho + checkout | Respeita estoque; baixa automática e atômica no banco (função `place_order`) |
+| **Pagamento com Pix** | QR Code + "copia e cola" gerados na hora com a chave Pix da barbearia (padrão BR Code EMV do Banco Central — sem intermediários e sem taxas) |
+| E-mails automáticos | Confirmação de agendamento, pedido e alterações de status (via Resend, opcional) |
 | Minha conta | Próximos agendamentos, histórico, meus pedidos, **reagendamento**, cancelamento, edição de perfil e **troca de senha** |
 | "Primeiro disponível" | O cliente não escolhe barbeiro: mostramos os horários de toda a equipe e o atendimento fica com quem tiver o encaixe |
 | Busca na loja | Campo de busca por nome do produto |
@@ -28,13 +30,13 @@ Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + v
 |---|---|
 | Dashboard | KPIs do dia/mês (agendamentos, pendências, receita, estoque baixo), agenda do dia com ações rápidas e top serviços |
 | Agendamentos | Filtros por dia/barbeiro/status; confirmar, concluir e cancelar; **novo agendamento manual** (telefone/balcão) com horários livres em tempo real |
-| Barbeiros | CRUD completo, comissão, foto, bio, **login vinculado**, serviços que executa e **escala semanal com até 2 janelas por dia** |
+| Barbeiros | CRUD completo, comissão, foto (**com upload do computador**), bio, **login vinculado**, serviços que executa e **escala semanal com até 2 janelas por dia** |
 | Serviços | CRUD com preço e duração (alimentam o agendamento) |
-| Produtos | CRUD com estoque, categoria e imagem; destaque de estoque baixo |
+| Produtos | CRUD com estoque, categoria e imagem (**upload direto via Supabase Storage**); destaque de estoque baixo |
 | Vendas (PDV) | Lançamento rápido de vendas no balcão (avulsa ou vinculada ao cliente) com baixa de estoque + histórico de pedidos |
 | Clientes (CRM) | Base de clientes com busca por nome/e-mail, nº de visitas, total gasto, última visita e últimos atendimentos |
 | Relatórios | Receita do mês (serviços × produtos), **comissões por barbeiro** (prontas para o pagamento), top clientes, gráfico dos últimos 6 meses e **exportação CSV/Excel** |
-| Configurações | Dados da barbearia (endereço, telefone, horários, intervalo entre encaixes) + guia de promoção de admins |
+| Configurações | Dados da barbearia: endereço, contato, horários, intervalo entre encaixes e **chave Pix** (habilita os QR Codes) + guia de promoção de admins |
 
 ### ✂️ Portal do barbeiro (`/barbeiro`)
 Quando o admin vincula um login a um barbeiro, esse profissional ganha acesso próprio:
@@ -110,6 +112,7 @@ Funções e guardas no banco:
 - No painel do Supabase abra **SQL Editor** → **New query**;
 - Cole TODO o conteúdo de [`supabase/migrations/0001_schema.sql`](supabase/migrations/0001_schema.sql) → **Run**;
 - Repita com [`supabase/migrations/0002_barber_portal.sql`](supabase/migrations/0002_barber_portal.sql) (portal do barbeiro + reagendamento) → **Run**;
+- E com [`supabase/migrations/0003_pix_storage.sql`](supabase/migrations/0003_pix_storage.sql) (chave Pix + bucket de imagens) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador
@@ -141,6 +144,11 @@ npm install
 # configure as variáveis
 cp .env.example .env.local
 # ...edite .env.local com a URL e a chave anon do seu projeto (Settings -> API)
+#
+# OPCIONAL — e-mails automáticos via https://resend.com (plano grátis):
+# RESEND_API_KEY=re_xxx
+# EMAIL_FROM=BarberPro <naoresponda@seudominio.com>
+# Sem essas variáveis o app funciona 100%; os e-mails simplesmente não são enviados.
 
 # suba o servidor
 npm run dev
@@ -204,15 +212,19 @@ app/
 - **Sem service_role no app:** o site usa apenas a chave **anon** — toda escrita passa por RLS ou RPC segura;
 - **Preços em centavos (inteiros)** para evitar erros de ponto flutuante;
 - **SEO:** `robots.txt`, `sitemap.xml` e manifest incluídos.
+- **Pix nativo:** o "copia e cola" é montado localmente ([`lib/pix.ts`](lib/pix.ts), padrão EMV + CRC16) com a chave Pix da barbearia — o dinheiro cai direto na conta do estabelecimento, sem gateway e sem taxa por transação.
+- **Uploads:** imagens de produtos/barbeiros vão para o bucket público `media` do Supabase Storage; apenas admins podem gravar (policies RLS na migration 0003).
 
 ## 🗺 Roadmap (ideias)
 
 - [x] ~~Portal do barbeiro~~ ✅
 - [x] ~~Relatórios + comissões + export CSV~~ ✅
 - [x] ~~Reagendamento + "primeiro disponível"~~ ✅
-- [ ] Notificações (e-mail/WhatsApp) de confirmação e lembrete
-- [ ] Pagamento online real (Stripe/Mercado Pago) com webhook
-- [ ] Upload de imagens via Supabase Storage
+- [x] ~~Notificações por e-mail (Resend)~~ ✅
+- [x] ~~Pagamento online (Pix nativo, sem taxas)~~ ✅
+- [x] ~~Upload de imagens (Supabase Storage)~~ ✅
+- [ ] Cartão de crédito via Stripe/Mercado Pago com webhook
+- [ ] Lembretes por WhatsApp (exige WhatsApp Business API)
 - [ ] Multi-estabelecimento com seleção por subdomínio
 
 ## 📄 Licença

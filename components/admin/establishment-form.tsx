@@ -51,6 +51,19 @@ export default function EstablishmentForm({
           <label className="label" htmlFor="est-instagram">Instagram</label>
           <input id="est-instagram" name="instagram" defaultValue={e?.instagram ?? ''} className="input" placeholder="@suabarbearia" />
         </div>
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor="est-pix">Chave Pix (recebimento direto, sem taxas)</label>
+          <input
+            id="est-pix"
+            name="pix_key"
+            defaultValue={e?.pix_key ?? ''}
+            className="input"
+            placeholder="CPF/CNPJ, e-mail, telefone (+55...) ou chave aleatória"
+          />
+          <p className="mt-1 text-[11px] text-stone-600">
+            Com a chave configurada, o site gera QR Code Pix automático para pedidos e agendamentos.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

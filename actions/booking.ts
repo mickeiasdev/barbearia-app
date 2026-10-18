@@ -3,8 +3,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { friendlyDbError } from '@/lib/utils'
-import { spDateTimeToUTC } from '@/lib/tz'
+import { friendlyDbError, formatBRL } from '@/lib/utils'
+import { shortDateLabel, spDateTimeToUTC } from '@/lib/tz'
+import { sendEmail, emailHtml } from '@/lib/email'
 import type { Barber, Service } from '@/lib/types'
 
 export interface BookingState {
@@ -44,6 +45,28 @@ export async function createAppointmentAction(
       p_time: time,
     })
     if (error) return { error: friendlyDbError(error.message) }
+
+    const { data: bName } = await supabase
+      .from('barbers')
+      .select('full_name')
+      .eq('id', barberId)
+      .maybeSingle()
+
+    await sendEmail(
+      auth.user.email,
+      'Atendimento reagendado',
+      emailHtml('Atendimento reagendado!', [
+        'Seu atendimento foi movido para <strong>' +
+          shortDateLabel(dateKey) +
+          ' às ' +
+          time +
+          '</strong>' +
+          (bName ? ' com <strong>' + (bName as { full_name: string }).full_name + '</strong>' : '') +
+          '.',
+        'O horário anterior foi liberado automaticamente.',
+      ])
+    )
+
     revalidatePath('/minha-conta')
     redirect('/minha-conta?reagendado=1')
   }
@@ -109,6 +132,22 @@ export async function createAppointmentAction(
 
   if (error) return { error: friendlyDbError(error.message) }
 
+  await sendEmail(
+    auth.user.email,
+    'Agendamento recebido — ' + svc.name,
+    emailHtml(
+      'Agendamento recebido!',
+      [
+        'Olá! Registramos seu pedido de agendamento:',
+        '<strong>' + svc.name + '</strong> com ' + brb.full_name,
+        '<strong>' + shortDateLabel(dateKey) + ' às ' + time + '</strong> (horário de Brasília)',
+        'Valor: ' + formatBRL(svc.price_cents) + ' — pagamento no local ou por Pix.',
+        'Status: <em>pendente</em>. A barbearia irá confirmar em breve.',
+      ],
+      'Acompanhe em Minha Conta no site.'
+    )
+  )
+
   revalidatePath('/minha-conta')
   redirect('/minha-conta?agendado=1')
 }
@@ -137,6 +176,15 @@ export async function cancelAppointmentAction(
     .eq('client_id', auth.user.id)
 
   if (error) return { error: friendlyDbError(error.message) }
+
+  await sendEmail(
+    auth.user.email,
+    'Agendamento cancelado',
+    emailHtml('Agendamento cancelado', [
+      'Seu agendamento foi cancelado com sucesso.',
+      'Quer remarcar? É só escolher um novo horário no site — leva menos de um minuto.',
+    ])
+  )
 
   revalidatePath('/minha-conta')
   return { ok: true }
