@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Calendar, Package, Receipt, User } from 'lucide-react'
+import { Calendar, CalendarClock, KeyRound, Package, Receipt, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/data'
 import { formatBRL, formatDuration, PAYMENT_LABEL } from '@/lib/utils'
 import { dateKey, shortDateLabel, timeInSP } from '@/lib/tz'
 import StatusBadge from '@/components/status-badge'
 import CancelAppointmentButton from '@/components/cancel-appointment-button'
+import ChangePasswordForm from '@/components/change-password-form'
 import ProfileForm from '@/components/profile-form'
 import type { AppointmentDetails, OrderWithItems } from '@/lib/types'
 
@@ -15,7 +16,11 @@ export const metadata: Metadata = { title: 'Minha conta' }
 export default async function MinhaContaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ agendado?: string; cancelado?: string }>
+  searchParams: Promise<{
+    agendado?: string
+    reagendado?: string
+    sembarbeiro?: string
+  }>
 }) {
   const sp = await searchParams
   const user = await getCurrentUser()
@@ -81,6 +86,17 @@ export default async function MinhaContaPage({
           Agendamento criado com sucesso! Aguarde a confirmação da barbearia.
         </div>
       )}
+      {sp.reagendado && (
+        <div className="ok-box mt-6">
+          Atendimento reagendado com sucesso! Veja os novos dados abaixo.
+        </div>
+      )}
+      {sp.sembarbeiro && (
+        <div className="error-box mt-6">
+          Sua conta é de barbeiro, mas ainda não está vinculada a nenhum profissional da
+          barbearia. Fale com o administrador para ativar seu acesso ao portal.
+        </div>
+      )}
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
         {/* ===== coluna principal ===== */}
@@ -123,7 +139,17 @@ export default async function MinhaContaPage({
                       <p className="mt-1 text-xs italic text-stone-500">“{appt.notes}”</p>
                     )}
                   </div>
-                  <div className="self-center">
+                  <div className="flex w-full flex-col gap-2 sm:w-44">
+                    <Link
+                      href={
+                        '/agendar?re=' + appt.id +
+                        '&servico=' + appt.service_id +
+                        '&barbeiro=' + appt.barber_id
+                      }
+                      className="btn btn-outline btn-sm w-full"
+                    >
+                      <CalendarClock className="h-3.5 w-3.5" /> Reagendar
+                    </Link>
                     <CancelAppointmentButton id={appt.id} />
                   </div>
                 </div>
@@ -219,6 +245,13 @@ export default async function MinhaContaPage({
             {user.profile?.email && (
               <p className="mt-4 text-xs text-stone-600">{user.profile.email}</p>
             )}
+          </div>
+
+          <div className="card p-6">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-100">
+              <KeyRound className="h-5 w-5 text-amber-500" /> Alterar senha
+            </h2>
+            <ChangePasswordForm />
           </div>
 
           <div className="card p-6 text-sm text-stone-500">

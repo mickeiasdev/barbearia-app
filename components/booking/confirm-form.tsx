@@ -11,6 +11,7 @@ interface Props {
   hora: string
   isLoggedIn: boolean
   loginUrl: string
+  re?: string | null
 }
 
 export default function ConfirmForm(props: Props) {
@@ -23,8 +24,8 @@ export default function ConfirmForm(props: Props) {
     return (
       <div className="card space-y-4 p-6 text-center">
         <p className="text-sm text-stone-400">
-          Falta pouco! Entre na sua conta para confirmar o agendamento —
-          seu progresso será mantido.
+          Falta pouco! Entre na sua conta para confirmar{' '}
+          {props.re ? 'o reagendamento' : 'o agendamento'} — seu progresso será mantido.
         </p>
         <a href={props.loginUrl} className="btn btn-primary w-full">
           <LogIn className="h-4 w-4" />
@@ -42,6 +43,7 @@ export default function ConfirmForm(props: Props) {
       <input type="hidden" name="barbeiro" value={props.barbeiro} />
       <input type="hidden" name="data" value={props.data} />
       <input type="hidden" name="hora" value={props.hora} />
+      {props.re && <input type="hidden" name="re" value={props.re} />}
 
       <div>
         <label htmlFor="notes" className="label">
@@ -58,11 +60,19 @@ export default function ConfirmForm(props: Props) {
 
       <button type="submit" disabled={isPending} className="btn btn-primary w-full py-3 text-base">
         <CalendarCheck className="h-5 w-5" />
-        {isPending ? 'Confirmando...' : 'Confirmar agendamento'}
+        {isPending
+          ? props.re
+            ? 'Reagendando...'
+            : 'Confirmando...'
+          : props.re
+            ? 'Confirmar reagendamento'
+            : 'Confirmar agendamento'}
       </button>
 
       <p className="text-center text-xs text-stone-600">
-        Você receberá a confirmação aqui mesmo e pode acompanhar tudo em Minha Conta.
+        {props.re
+          ? 'O horário anterior será substituído por este.'
+          : 'Você pode acompanhar tudo em Minha Conta.'}
       </p>
     </form>
   )

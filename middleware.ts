@@ -7,7 +7,10 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // Rotas que exigem sessão (a checagem de papel admin é feita no layout)
-  if (!user && (path.startsWith('/minha-conta') || path.startsWith('/admin'))) {
+  if (
+    !user &&
+    (path.startsWith('/minha-conta') || path.startsWith('/admin') || path.startsWith('/barbeiro'))
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = '/entrar'
     url.search = ''

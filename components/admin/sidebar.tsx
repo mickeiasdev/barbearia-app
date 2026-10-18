@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
+  BarChart3,
   Calendar,
   LayoutDashboard,
   LogOut,
@@ -12,6 +13,7 @@ import {
   Settings,
   Sparkles,
   Store,
+  Users,
 } from 'lucide-react'
 import { logoutAction } from '@/actions/auth'
 import { APP_NAME } from '@/lib/utils'
@@ -23,6 +25,8 @@ const LINKS = [
   { href: '/admin/servicos', label: 'Serviços', icon: Sparkles },
   { href: '/admin/produtos', label: 'Produtos', icon: Package },
   { href: '/admin/vendas', label: 'Vendas', icon: Receipt },
+  { href: '/admin/clientes', label: 'Clientes', icon: Users },
+  { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
 

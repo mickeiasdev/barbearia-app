@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Package } from 'lucide-react'
+import { Package, Search } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL } from '@/lib/utils'
@@ -11,10 +11,11 @@ export const metadata: Metadata = { title: 'Loja' }
 export default async function LojaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cat?: string }>
+  searchParams: Promise<{ cat?: string; q?: string }>
 }) {
   const sp = await searchParams
   const activeCat = sp.cat && sp.cat !== 'todos' ? sp.cat : null
+  const q = (sp.q ?? '').trim().replace(/[%_]/g, '')
 
   const supabase = await createClient()
   let query = supabase
@@ -25,6 +26,10 @@ export default async function LojaPage({
 
   if (activeCat) {
     query = query.eq('category', activeCat)
+  }
+
+  if (q) {
+    query = query.ilike('name', '%' + q + '%')
   }
 
   const [{ data: productsData }, { data: allProducts }] = await Promise.all([
@@ -41,6 +46,21 @@ export default async function LojaPage({
       <p className="mt-2 text-sm text-stone-500">
         Produtos profissionais usados pelos nossos barbeiros. Compre online e retire na barbearia.
       </p>
+
+      {/* busca */}
+      <form action="/loja" className="mt-6 flex max-w-md gap-2">
+        {activeCat && <input type="hidden" name="cat" value={activeCat} />}
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Buscar produto..."
+          aria-label="Buscar produto"
+          className="input"
+        />
+        <button type="submit" className="btn btn-outline shrink-0" aria-label="Buscar">
+          <Search className="h-4 w-4" />
+        </button>
+      </form>
 
       {categories.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">

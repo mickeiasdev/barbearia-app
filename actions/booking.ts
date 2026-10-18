@@ -31,6 +31,23 @@ export async function createAppointmentAction(
     return { error: 'Entre na sua conta para confirmar o agendamento.' }
   }
 
+  // ===== REAGENDAMENTO =====
+  // Substitui um agendamento ativo existente; a RPC valida dono,
+  // status, serviço, jornada do barbeiro e conflitos no banco.
+  const rescheduleId = String(formData.get('re') ?? '').trim() || null
+  if (rescheduleId) {
+    const { error } = await supabase.rpc('reschedule_appointment', {
+      p_appointment_id: rescheduleId,
+      p_barber_id: barberId,
+      p_service_id: serviceId,
+      p_date: dateKey,
+      p_time: time,
+    })
+    if (error) return { error: friendlyDbError(error.message) }
+    revalidatePath('/minha-conta')
+    redirect('/minha-conta?reagendado=1')
+  }
+
   const { data: service } = await supabase
     .from('services')
     .select('*')

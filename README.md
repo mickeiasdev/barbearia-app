@@ -17,7 +17,9 @@ Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + v
 | Agendamento em 4 passos | Serviço → Barbeiro → Dia → Hora, com horários calculados em tempo real |
 | Anti-conflito à prova de corrida | Constraint no Postgres impede dois agendamentos do mesmo barbeiro no mesmo horário |
 | Carrinho + checkout | Respeita estoque; baixa automática e atômica no banco (função `place_order`) |
-| Minha conta | Próximos agendamentos, histórico, meus pedidos, cancelamento e edição de perfil |
+| Minha conta | Próximos agendamentos, histórico, meus pedidos, **reagendamento**, cancelamento, edição de perfil e **troca de senha** |
+| "Primeiro disponível" | O cliente não escolhe barbeiro: mostramos os horários de toda a equipe e o atendimento fica com quem tiver o encaixe |
+| Busca na loja | Campo de busca por nome do produto |
 | Cadastro/Login | E-mail + senha via Supabase Auth |
 | WhatsApp flutuante | Usa o número cadastrado pela barbearia |
 
@@ -30,7 +32,18 @@ Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + v
 | Serviços | CRUD com preço e duração (alimentam o agendamento) |
 | Produtos | CRUD com estoque, categoria e imagem; destaque de estoque baixo |
 | Vendas (PDV) | Lançamento rápido de vendas no balcão (avulsa ou vinculada ao cliente) com baixa de estoque + histórico de pedidos |
+| Clientes (CRM) | Base de clientes com busca por nome/e-mail, nº de visitas, total gasto, última visita e últimos atendimentos |
+| Relatórios | Receita do mês (serviços × produtos), **comissões por barbeiro** (prontas para o pagamento), top clientes, gráfico dos últimos 6 meses e **exportação CSV/Excel** |
 | Configurações | Dados da barbearia (endereço, telefone, horários, intervalo entre encaixes) + guia de promoção de admins |
+
+### ✂️ Portal do barbeiro (`/barbeiro`)
+Quando o admin vincula um login a um barbeiro, esse profissional ganha acesso próprio:
+
+- **Agenda do dia** com nome/telefone do cliente, serviço e observações;
+- **Confirmar** (pendente → confirmado) e **concluir** (→ finalizado) atendimentos com 1 clique;
+- **Próximos 7 dias** agrupados por dia;
+- **Comissão do mês** calculada na hora (receita × % dele);
+- Políticas RLS próprias: o barbeiro só vê e mexe nos **seus** atendimentos — nunca pode cancelar nem ver os dos colegas.
 
 ---
 
@@ -71,12 +84,12 @@ erDiagram
 
 **Segurança (RLS):** cada papel só faz o que deve —
 
-| Tabela | Visitante | Cliente | Admin |
-|---|---|---|---|
-| serviços, barbeiros, produtos, escalas | lê ativos | lê ativos | tudo |
-| agendamentos | — | cria/cancela os próprios | tudo |
-| pedidos | — | vê os próprios (checkout via RPC segura) | tudo |
-| perfis | — | edita o próprio (sem mudar papel) | tudo |
+| Tabela | Visitante | Cliente | Barbeiro | Admin |
+|---|---|---|---|---|
+| serviços, barbeiros, produtos, escalas | lê ativos | lê ativos | lê ativos | tudo |
+| agendamentos | — | cria/cancela/reagenda os próprios | vê e confirma/conclui os seus | tudo |
+| pedidos | — | vê os próprios (checkout via RPC segura) | — | tudo |
+| perfis | — | edita o próprio (sem mudar papel) | lê os seus clientes | tudo |
 
 Funções e guardas no banco:
 - `get_available_slots(barbeiro, data, duracao)` — cruza escala × agendamentos ativos, fuso SP;
@@ -96,6 +109,7 @@ Funções e guardas no banco:
 ### 2. Rodar o schema SQL
 - No painel do Supabase abra **SQL Editor** → **New query**;
 - Cole TODO o conteúdo de [`supabase/migrations/0001_schema.sql`](supabase/migrations/0001_schema.sql) → **Run**;
+- Repita com [`supabase/migrations/0002_barber_portal.sql`](supabase/migrations/0002_barber_portal.sql) (portal do barbeiro + reagendamento) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador
@@ -170,7 +184,11 @@ app/
 │   ├── servicos/      # CRUD
 │   ├── produtos/      # CRUD + estoque
 │   ├── vendas/        # PDV + histórico
+│   ├── clientes/      # CRM (busca, visitas, gasto)
+│   ├── relatorios/    # receita, comissões, export CSV
 │   └── configuracoes/ # barbearia + guia de admins
+├── barbeiro/          # portal do barbeiro (agenda própria)
+├── api/export/        # exportação CSV (admin)
 ├── actions/           # server actions (auth, booking, orders, admin)
 ├── components/        # UI (carrinho, wizard, formulários, badges...)
 ├── lib/               # supabase clients, tipos, timezone SP, utils
@@ -189,7 +207,9 @@ app/
 
 ## 🗺 Roadmap (ideias)
 
-- [ ] Portal do barbeiro (agenda própria com o login vinculado)
+- [x] ~~Portal do barbeiro~~ ✅
+- [x] ~~Relatórios + comissões + export CSV~~ ✅
+- [x] ~~Reagendamento + "primeiro disponível"~~ ✅
 - [ ] Notificações (e-mail/WhatsApp) de confirmação e lembrete
 - [ ] Pagamento online real (Stripe/Mercado Pago) com webhook
 - [ ] Upload de imagens via Supabase Storage

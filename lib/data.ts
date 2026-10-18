@@ -70,6 +70,44 @@ export async function requireAdminAction(): Promise<Awaited<ReturnType<typeof cr
   return supabase
 }
 
+/** Usado nas páginas do portal do barbeiro: exige papel 'barber' + vínculo. */
+export async function requireBarberPage(): Promise<{
+  supabase: Awaited<ReturnType<typeof createClient>>
+  user: { id: string; email?: string }
+  profile: Profile
+  barber: Barber
+}> {
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) redirect('/entrar?next=/barbeiro')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', auth.user.id)
+    .maybeSingle()
+
+  if (!profile) redirect('/')
+  const prof = profile as Profile
+  if (prof.role === 'admin') redirect('/admin')
+  if (prof.role !== 'barber') redirect('/')
+
+  const { data: barber } = await supabase
+    .from('barbers')
+    .select('*')
+    .eq('profile_id', auth.user.id)
+    .maybeSingle()
+
+  if (!barber) redirect('/minha-conta?sembarbeiro=1')
+
+  return {
+    supabase,
+    user: { id: auth.user.id, email: auth.user.email },
+    profile: prof,
+    barber: barber as Barber,
+  }
+}
+
 /** Barbeiros ativos do estabelecimento. */
 export async function getActiveBarbers(establishmentId: string): Promise<Barber[]> {
   const supabase = await createClient()

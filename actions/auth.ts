@@ -83,6 +83,26 @@ export async function logoutAction() {
   redirect('/')
 }
 
+export async function updatePasswordAction(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const password = String(formData.get('password') ?? '')
+  const confirm = String(formData.get('confirm') ?? '')
+
+  if (password.length < 6) return { error: 'A senha deve ter pelo menos 6 caracteres.' }
+  if (password !== confirm) return { error: 'As senhas não coincidem.' }
+
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return { error: 'Sessão expirada. Entre novamente.' }
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) return { error: friendlyDbError(error.message) }
+
+  return { notice: 'Senha alterada com sucesso.' }
+}
+
 export async function updateProfileAction(
   _prev: AuthState,
   formData: FormData

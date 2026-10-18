@@ -28,6 +28,9 @@ export default async function SiteHeader() {
           <Link href="/barbeiros" className={navLink}>Barbeiros</Link>
           <Link href="/loja" className={navLink}>Loja</Link>
           {isAdmin && <Link href="/admin" className={navLink}>Painel Admin</Link>}
+          {user?.profile?.role === 'barber' && (
+            <Link href="/barbeiro" className={navLink}>Minha agenda</Link>
+          )}
         </nav>
 
         <div className="flex items-center gap-2">

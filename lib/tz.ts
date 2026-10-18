@@ -111,6 +111,35 @@ export function currentMonthKey(): string {
   return k.slice(0, 7)
 }
 
+const MONTH_NAMES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+/** "2026-10" -> "outubro de 2026" */
+export function monthLabel(monthKey: string): string {
+  const y = Number(monthKey.slice(0, 4))
+  const m = Number(monthKey.slice(5, 7))
+  return MONTH_NAMES[m - 1] + ' de ' + y
+}
+
+export function prevMonthKey(monthKey: string): string {
+  let y = Number(monthKey.slice(0, 4))
+  let m = Number(monthKey.slice(5, 7)) - 1
+  if (m === 0) {
+    m = 12
+    y -= 1
+  }
+  return y + '-' + String(m).padStart(2, '0')
+}
+
+export function nextMonthKey(monthKey: string): string {
+  let y = Number(monthKey.slice(0, 4))
+  let m = Number(monthKey.slice(5, 7)) + 1
+  if (m === 13) {
+    m = 1
+    y += 1
+  }
+  return y + '-' + String(m).padStart(2, '0')
+}
+
 /** Início/fim do mês dado "yyyy-mm" (ISO UTC). */
 export function monthRange(monthKey: string): { start: string; end: string } {
   const y = Number(monthKey.slice(0, 4))
