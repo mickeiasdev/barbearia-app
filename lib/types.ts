@@ -32,6 +32,8 @@ export interface Establishment {
   banner_url: string | null
   tagline: string | null
   display_name: string | null
+  trial_ends_at: string | null
+  plan_paid_until: string | null
   created_at: string
 }
 

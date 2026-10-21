@@ -6,9 +6,10 @@ import { dayTimeLabel } from '@/lib/tz'
 export const dynamic = 'force-dynamic'
 
 /**
- * Lembrete automático de agendamentos das próximas 24h.
- * Agendado no vercel.json (todos os dias às 09:00 de Brasília)
- * e protegido por CRON_SECRET (se configurado).
+ * Tarefas diárias (cron 09:00 Brasília):
+ * 1. Expira trials vencidos (trial → free).
+ * 2. Envia lembretes de agendamentos das próximas 24h.
+ * Protegido por CRON_SECRET (se configurado).
  * Pode ser chamado manualmente: /api/cron/lembretes?secret=...
  */
 export async function GET(request: Request) {
@@ -24,6 +25,15 @@ export async function GET(request: Request) {
   if (!supabase) {
     return new Response('SUPABASE_SERVICE_ROLE_KEY não configurada', { status: 503 })
   }
+
+  // 1) trials vencidos voltam ao plano Grátis
+  const { data: expired } = await supabase
+    .from('establishments')
+    .update({ plan: 'free', trial_ends_at: null })
+    .eq('plan', 'trial')
+    .lt('trial_ends_at', new Date().toISOString())
+    .eq('is_company', true)
+    .select('id')
 
   const now = new Date()
   const until = new Date(now.getTime() + 24 * 3600 * 1000)
@@ -102,5 +112,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return Response.json({ ok: true, checked: appts.length, sent })
+  return Response.json({ ok: true, trialsExpired: expired?.length ?? 0, checked: appts.length, sent })
 }

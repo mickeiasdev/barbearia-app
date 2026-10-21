@@ -118,6 +118,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0006_master_control.sql`](supabase/migrations/0006_master_control.sql) (**controle master**: cadastro de espaços/barbeiros exclusivo do administrador master; auto-cadastro de profissional desligado) → **Run**;
 - E com [`supabase/migrations/0007_company_hierarchy.sql`](supabase/migrations/0007_company_hierarchy.sql) (**hierarquia em 3 níveis**: empresas (`is_company`) agrupam espaços de profissionais (`parent_id`); 1º barbeiro vira gerenciador da empresa) → **Run**;
 - E com [`supabase/migrations/0008_presentation.sql`](supabase/migrations/0008_presentation.sql) (**apresentação configurável**: 3 layouts de site por barbeiro + banner, nome de exibição e frase) → **Run**;
+- E com [`supabase/migrations/0009_saas_billing.sql`](supabase/migrations/0009_saas_billing.sql) (**SaaS**: auto-onboarding de barbearias com trial 14 dias, gerente cadastra barbeiros, planos Pro/Business) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -149,6 +150,13 @@ update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
 
 Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
+
+### Vendendo o sistema (SaaS)
+- **Landing de vendas**: `/vender` — pitch, mockups, planos e FAQ. Aponte um domínio dedicado pra ela se quiser.
+- **Auto-onboarding**: `/registrar-empresa` — o dono da barbearia se cadastra sozinho e ganha **14 dias de Pro grátis** (migration 0009).
+- **Trial**: banner no painel com dias restantes; ao expirar, o cron diário volta o plano para Grátis (1 profissional).
+- **Assinatura**: `/assinar` gera Pix mensal via Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN` no .env). Configure o webhook `/api/webhooks/mercadopago` no painel do MP (evento *payments*) — o plano é ativado automaticamente após o pagamento.
+- **Gerente da barbearia** cadastra os barbeiros dele em *Minha empresa* (`/admin/empresa`) com login/senha (requer `SUPABASE_SERVICE_ROLE_KEY`); o plano Grátis limita a 1 profissional.
 
 ### Site do barbeiro: 3 layouts configuráveis
 Em *Configurações → Site e apresentação*, cada profissional escolhe como o SEU site aparece:

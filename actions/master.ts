@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
-import { MASTER_WS_COOKIE, isPlatformAdmin } from '@/lib/data'
+import { MASTER_WS_COOKIE, isPlatformAdmin, getMyCompany } from '@/lib/data'
 import { friendlyDbError } from '@/lib/utils'
 import type { Establishment } from '@/lib/types'
 
@@ -13,6 +13,38 @@ export interface MasterState {
   error?: string
   ok?: boolean
   notice?: string
+}
+
+/**
+ * Contexto de quem pode cadastrar barbeiros:
+ * - MASTER da plataforma (qualquer empresa);
+ * - GERENTE de uma barbearia (apenas a empresa dele, com limite por plano).
+ */
+async function requireBarberCreator(): Promise<{
+  supabase: Awaited<ReturnType<typeof createClient>>
+  userId: string
+  isMaster: boolean
+  company: Establishment | null
+} | null> {
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return null
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', auth.user.id)
+    .maybeSingle()
+  if (!profile || profile.role !== 'admin') return null
+
+  if (await isPlatformAdmin(supabase)) {
+    return { supabase, userId: auth.user.id, isMaster: true, company: null }
+  }
+
+  const company = await getMyCompany(supabase)
+  if (company) {
+    return { supabase, userId: auth.user.id, isMaster: false, company }
+  }
+  return null
 }
 
 /** Exige sessão de admin MASTER da plataforma (não é qualquer admin). */
@@ -70,9 +102,9 @@ export async function masterCreateBarberAction(
   _prev: MasterState,
   formData: FormData
 ): Promise<MasterState> {
-  const master = await requireMaster()
-  if (!master) return { error: 'Sem permissão — apenas o administrador master cadastra barbeiros.' }
-  const { supabase } = master
+  const creator = await requireBarberCreator()
+  if (!creator) return { error: 'Sem permissão — apenas o administrador master ou o gerente da empresa cadastra barbeiros.' }
+  const { supabase, isMaster } = creator
 
   const name = String(formData.get('name') ?? '').trim()
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
@@ -89,8 +121,27 @@ export async function masterCreateBarberAction(
   }
 
   // ===== EMPRESA onde o barbeiro vai trabalhar =====
-  const companyId = String(formData.get('company_id') ?? '').trim()
+  // gerente de barbearia: sempre a empresa DELE (com limite por plano);
+  // master da plataforma: usa a empresa escolhida no formulário
   let company: Establishment | null = null
+
+  if (!isMaster) {
+    company = creator.company
+    if (!company) return { error: 'Empresa não encontrada.' }
+    if (company.plan === 'free') {
+      const { count } = await supabase
+        .from('establishments')
+        .select('id', { count: 'exact', head: true })
+        .eq('parent_id', company.id)
+      if ((count ?? 0) >= 1) {
+        return {
+          error:
+            'O plano Grátis permite 1 profissional. Assine o Pro em Assinar para cadastrar mais barbeiros.',
+        }
+      }
+    }
+  } else {
+  const companyId = String(formData.get('company_id') ?? '').trim()
 
   if (companyId) {
     const { data: companyData } = await supabase
@@ -119,7 +170,7 @@ export async function masterCreateBarberAction(
         phone: companyWhatsapp,
         whatsapp: companyWhatsapp,
         is_company: true,
-        owner_id: master.userId,
+        owner_id: creator.userId,
         slug: companySlug,
       })
       .select('*')
@@ -127,6 +178,7 @@ export async function masterCreateBarberAction(
     if (companyError) return { error: friendlyDbError(companyError.message) }
     company = newCompany as Establishment
   }
+  } // fim do bloco do master
 
   const workspaceName = company.name + ' — ' + name
 

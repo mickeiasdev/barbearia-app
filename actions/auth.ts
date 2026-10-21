@@ -247,3 +247,62 @@ export async function updateProfileAction(
   revalidatePath('/minha-conta')
   return { notice: 'Perfil atualizado com sucesso.' }
 }
+
+// ============================================================
+// AUTO-ONBOARDING DE BARBEARIA (trial 14 dias do plano Pro)
+// ============================================================
+export interface TenantState {
+  error?: string
+}
+
+export async function registerTenantAction(
+  _prev: TenantState,
+  formData: FormData
+): Promise<TenantState> {
+  const companyName = String(formData.get('company_name') ?? '').trim()
+  const address = String(formData.get('address') ?? '').trim() || null
+  const whatsapp = String(formData.get('whatsapp') ?? '').trim() || null
+  const opening = String(formData.get('opening_time') ?? '09:00') || '09:00'
+  const closing = String(formData.get('closing_time') ?? '19:00') || '19:00'
+
+  // se não está logado, cria a conta de dono primeiro
+  const supabase = await createClient()
+  const { data: auth } = await supabase.auth.getUser()
+
+  if (!auth.user) {
+    const fullName = String(formData.get('full_name') ?? '').trim()
+    const email = String(formData.get('email') ?? '').trim()
+    const password = String(formData.get('password') ?? '')
+    if (!fullName) return { error: 'Informe seu nome.' }
+    if (!email.includes('@')) return { error: 'Informe um e-mail válido.' }
+    if (password.length < 6) return { error: 'A senha deve ter pelo menos 6 caracteres.' }
+
+    const { data: signup, error: signupError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    })
+    if (signupError) return { error: friendlyDbError(signupError.message) }
+    if (!signup.session) {
+      return {
+        error:
+          'Conta criada! Confirme seu e-mail, entre e volte a esta página para criar sua barbearia (seus dados foram mantidos).',
+      }
+    }
+  }
+
+  if (!companyName) return { error: 'Informe o nome da barbearia.' }
+
+  const { error } = await supabase.rpc('create_tenant', {
+    p_company_name: companyName,
+    p_address: address,
+    p_whatsapp: whatsapp,
+    p_opening: opening,
+    p_closing: closing,
+  })
+  if (error) return { error: friendlyDbError(error.message) }
+
+  revalidatePath('/', 'layout')
+  redirect('/admin/empresa?ok=' + encodeURIComponent('Bem-vindo! Sua barbearia está no teste Pro de 14 dias. Cadastre seus barbeiros.'))
+}
+

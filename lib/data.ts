@@ -99,18 +99,26 @@ export async function getMyWorkspace(supabase: Supabase): Promise<Establishment 
   const [{ data: memberRows }, { data: ownedRows }] = await Promise.all([
     supabase
       .from('establishment_admins')
-      .select('establishment_id')
+      .select('establishment_id, establishment:establishments(is_company)')
       .eq('profile_id', auth.user.id),
     supabase
       .from('establishments')
-      .select('id')
-      .eq('owner_id', auth.user.id)
-      .limit(1),
+      .select('id, is_company')
+      .eq('owner_id', auth.user.id),
   ])
 
+  // apenas ESPAÇOS de trabalho (empresas não são "onde eu atendo")
   const ids = new Set<string>()
-  for (const r of (memberRows ?? []) as { establishment_id: string }[]) ids.add(r.establishment_id)
-  for (const r of (ownedRows ?? []) as { id: string }[]) ids.add(r.id)
+  for (const r of (memberRows ?? []) as unknown as {
+    establishment_id: string
+    establishment?: { is_company: boolean }[] | null
+  }[]) {
+    const est = Array.isArray(r.establishment) ? r.establishment[0] : null
+    if (!est?.is_company) ids.add(r.establishment_id)
+  }
+  for (const r of (ownedRows ?? []) as { id: string; is_company: boolean }[]) {
+    if (!r.is_company) ids.add(r.id)
+  }
   if (ids.size === 0) return null
 
   const { data } = await supabase
