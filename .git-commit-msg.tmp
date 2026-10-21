@@ -1,3 +1,0 @@
-feat: 3 layouts drasticamente diferentes para o site do barbeiro, configuraveis nas Configuracoes
-
-Layouts Classico (banner centrado + foto redonda), Painel (lateral fixa + secoes numeradas) e Editorial (capa full-bleed + menu de cortes). Configuracao de layout, banner (upload), nome de exibicao e frase em Configuracoes > Site e apresentacao. /p/slug com banner e tagline. Migration 0008 com colunas + demo (banners gerados, um layout por barbeiro).
