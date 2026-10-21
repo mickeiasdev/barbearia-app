@@ -117,6 +117,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0005_new_features.sql`](supabase/migrations/0005_new_features.sql) (**novos recursos**: folgas pontuais, portfólio, avaliações, favoritos, no-show, desconto/estorno no PDV, perfil público `/p/slug`, lembretes 24h, Pix antecipado) → **Run**;
 - E com [`supabase/migrations/0006_master_control.sql`](supabase/migrations/0006_master_control.sql) (**controle master**: cadastro de espaços/barbeiros exclusivo do administrador master; auto-cadastro de profissional desligado) → **Run**;
 - E com [`supabase/migrations/0007_company_hierarchy.sql`](supabase/migrations/0007_company_hierarchy.sql) (**hierarquia em 3 níveis**: empresas (`is_company`) agrupam espaços de profissionais (`parent_id`); 1º barbeiro vira gerenciador da empresa) → **Run**;
+- E com [`supabase/migrations/0008_presentation.sql`](supabase/migrations/0008_presentation.sql) (**apresentação configurável**: 3 layouts de site por barbeiro + banner, nome de exibição e frase) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -148,6 +149,14 @@ update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
 
 Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
+
+### Site do barbeiro: 3 layouts configuráveis
+Em *Configurações → Site e apresentação*, cada profissional escolhe como o SEU site aparece:
+- **Layout 1 — Clássico**: banner ao centro com foto redonda sobreposta, nome serif gigante, tagline âmbar e seções simétricas;
+- **Layout 2 — Painel**: lateral fixa com foto, nome empilhado e contatos (banner no fundo); serviços rolam ao lado em linhas com preço pontilhado, seções numeradas (01, 02, 03);
+- **Layout 3 — Editorial**: banner full-bleed estilo capa de revista com nome enorme, menu de cortes com preços grandes e citações de avaliação destacadas.
+
+Também configura **banner** (upload até 4MB), **nome de exibição** e **frase de apresentação**. Sem banner, o site usa o fundo padrão. Os três barbeiros demo ficam com um layout diferente cada (após a migration 0008).
 
 ### Hierarquia em 3 níveis: plataforma → empresas → profissionais
 - **Site principal** (`SEUDOMINIO`): diretório das **empresas** cadastradas (Painel Master → Empresas).

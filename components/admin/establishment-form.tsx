@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { Save } from 'lucide-react'
 import { saveEstablishmentAction, type AdminFormState } from '@/actions/admin'
 import { saveCompanyAction, type CompanyState } from '@/actions/company'
@@ -20,8 +20,27 @@ export default function EstablishmentForm({
     isCompany ? saveCompanyAction : saveEstablishmentAction,
     {}
   )
+  const [layoutTheme, setLayoutTheme] = useState<number>(establishment?.layout_theme ?? 1)
 
   const e = establishment
+
+  const layoutOptions = [
+    {
+      value: 1,
+      title: 'Clássico',
+      desc: 'Banner ao centro, foto redonda sobreposta e nome em destaque.',
+    },
+    {
+      value: 2,
+      title: 'Painel',
+      desc: 'Lateral fixa com foto e contatos; serviços rolando ao lado.',
+    },
+    {
+      value: 3,
+      title: 'Editorial',
+      desc: 'Banner gigante estilo capa, nome enorme e listas de revista.',
+    },
+  ]
 
   return (
     <form action={formAction} className="space-y-5">
@@ -91,6 +110,131 @@ export default function EstablishmentForm({
             números e hífens. Vazio = mantém o atual.
           </p>
         </div>
+
+        {!isCompany && (
+          <div className="card space-y-5 border-stone-800 bg-stone-950/40 p-5 sm:col-span-2">
+            <div>
+              <h3 className="font-serif text-base font-bold uppercase tracking-wide text-stone-100">
+                Site e apresentação
+              </h3>
+              <p className="mt-1 text-xs text-stone-400">
+                Como o SEU site ({'{'}seu-nome{'}'}.SEU_DOMÍNIO) aparece para os clientes.
+              </p>
+            </div>
+
+            {/* escolha do layout */}
+            <div>
+              <span className="label">Layout do site</span>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {layoutOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setLayoutTheme(opt.value)}
+                    aria-pressed={layoutTheme === opt.value}
+                    className={
+                      'cursor-pointer rounded-xl border p-3 text-left transition-colors ' +
+                      (layoutTheme === opt.value
+                        ? 'border-amber-500 bg-amber-500/10'
+                        : 'border-stone-700 hover:border-amber-500/40')
+                    }
+                  >
+                    {/* mini-wireframe do layout */}
+                    <span className="mb-3 flex h-16 overflow-hidden rounded-lg border border-stone-800 bg-stone-900">
+                      {opt.value === 1 && (
+                        <span className="flex w-full flex-col items-center justify-center gap-1.5">
+                          <span className="h-6 w-6 rounded-full bg-amber-500/70" />
+                          <span className="h-1 w-12 rounded bg-stone-600" />
+                          <span className="h-1 w-8 rounded bg-stone-700" />
+                        </span>
+                      )}
+                      {opt.value === 2 && (
+                        <span className="flex w-full">
+                          <span className="flex h-full w-1/3 flex-col items-center justify-end gap-1 border-r border-stone-800 bg-stone-800/70 pb-2">
+                            <span className="h-5 w-5 rounded bg-amber-500/70" />
+                            <span className="h-1 w-8 rounded bg-stone-600" />
+                          </span>
+                          <span className="flex h-full flex-1 flex-col justify-center gap-1.5 px-2">
+                            <span className="h-1 w-full rounded bg-stone-600" />
+                            <span className="h-1 w-full rounded bg-stone-700" />
+                            <span className="h-1 w-2/3 rounded bg-stone-700" />
+                          </span>
+                        </span>
+                      )}
+                      {opt.value === 3 && (
+                        <span className="relative w-full bg-gradient-to-b from-stone-800 to-stone-900">
+                          <span className="absolute bottom-2 left-2 h-3 w-16 rounded bg-amber-500/80" />
+                          <span className="absolute bottom-2 right-2 h-4 w-4 rounded-full bg-stone-600" />
+                          <span className="absolute left-2 top-2 h-1 w-8 rounded bg-stone-600" />
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-sm font-semibold text-stone-100">{opt.title}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-stone-400">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+              <input type="hidden" name="layout_theme" value={layoutTheme} />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="label" htmlFor="est-display">Nome de exibição</label>
+                <input
+                  id="est-display"
+                  name="display_name"
+                  defaultValue={e?.display_name ?? ''}
+                  className="input"
+                  placeholder="Como no site (vazio = seu nome de barbeiro)"
+                  maxLength={60}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="est-tagline">Frase de apresentação</label>
+                <input
+                  id="est-tagline"
+                  name="tagline"
+                  defaultValue={e?.tagline ?? ''}
+                  className="input"
+                  placeholder="Ex.: Degradê impecável, sem fila de espera"
+                  maxLength={140}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label" htmlFor="est-banner">Banner do site (foto do espaço/trabalho)</label>
+              {e?.banner_url && (
+                <div className="mb-2 flex items-center gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={e.banner_url}
+                    alt="Banner atual"
+                    className="h-16 w-32 rounded-lg border border-stone-800 object-cover"
+                  />
+                  <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-400">
+                    <input
+                      type="checkbox"
+                      name="remove_banner"
+                      className="h-4 w-4 accent-amber-500"
+                    />
+                    Remover banner atual
+                  </label>
+                </div>
+              )}
+              <input
+                id="est-banner"
+                name="banner_file"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="input py-1.5 text-xs"
+              />
+              <p className="mt-1 text-[11px] text-stone-400">
+                JPG/PNG/WebP até 4MB — ideal 1600×600. Sem banner, o site usa o fundo padrão.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="sm:col-span-2">
           <label className="flex cursor-pointer items-start gap-2 text-sm text-stone-300">

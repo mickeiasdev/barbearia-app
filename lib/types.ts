@@ -28,6 +28,10 @@ export interface Establishment {
   plan: string
   parent_id: string | null
   is_company: boolean
+  layout_theme: number
+  banner_url: string | null
+  tagline: string | null
+  display_name: string | null
   created_at: string
 }
 

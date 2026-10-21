@@ -72,6 +72,31 @@ export async function saveEstablishmentAction(
     return { error: 'O endereço do perfil deve ter entre 2 e 60 caracteres.' }
   }
 
+  // ===== apresentação do site (layout, banner, nome e frase) =====
+  const layoutTheme = Number(formData.get('layout_theme') ?? 1) || 1
+  if (![1, 2, 3].includes(layoutTheme)) {
+    return { error: 'Layout inválido.' }
+  }
+  const displayName = String(formData.get('display_name') ?? '').trim() || null
+  const tagline = String(formData.get('tagline') ?? '').trim() || null
+  if (displayName && displayName.length > 60) {
+    return { error: 'O nome de exibição deve ter no máximo 60 caracteres.' }
+  }
+  if (tagline && tagline.length > 140) {
+    return { error: 'A frase de apresentação deve ter no máximo 140 caracteres.' }
+  }
+
+  // banner: novo arquivo substitui; checkbox remove
+  let bannerUrl: string | null | undefined = undefined
+  const bannerFile = formData.get('banner_file')
+  if (bannerFile instanceof File && bannerFile.size > 0) {
+    const uploaded = await uploadImage(supabase, bannerFile, 'banners')
+    if ('error' in uploaded) return { error: uploaded.error }
+    bannerUrl = uploaded.url
+  } else if (formData.get('remove_banner') !== null) {
+    bannerUrl = null
+  }
+
   if (!name) return { error: 'Informe o nome do seu espaço.' }
   if (openingTime >= closingTime) return { error: 'O horário de abertura deve ser antes do fechamento.' }
   if (!Number.isInteger(step) || step < 5 || step > 60) {
@@ -90,6 +115,10 @@ export async function saveEstablishmentAction(
     slot_step_min: step,
     ...(slugInput !== null ? { slug: slugInput } : {}),
     require_prepayment: requirePrepayment,
+    layout_theme: layoutTheme,
+    display_name: displayName,
+    tagline,
+    ...(bannerUrl !== undefined ? { banner_url: bannerUrl } : {}),
   }
 
   const { error } = await supabase

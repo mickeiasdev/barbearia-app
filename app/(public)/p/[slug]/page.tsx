@@ -83,7 +83,12 @@ export default async function ProfessionalPage({ params }: Props) {
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
       {/* ===== cabeçalho do espaço ===== */}
-      <div className="card p-8">
+      <div className="card overflow-hidden p-0">
+        {est.banner_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={est.banner_url} alt="" className="h-40 w-full object-cover md:h-56" />
+        )}
+        <div className="p-8">
         <div className="flex flex-col items-start gap-6 sm:flex-row">
           {barbers[0]?.photo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -107,6 +112,9 @@ export default async function ProfessionalPage({ params }: Props) {
                 {barbers[0].full_name}
                 {barbers.length > 1 ? ' +' + (barbers.length - 1) + ' na equipe' : ''}
               </p>
+            )}
+            {est.tagline && (
+              <p className="mt-1 text-sm italic text-amber-400/90">{est.tagline}</p>
             )}
 
             {reviews.length > 0 && barbers.length > 0 && (
@@ -162,6 +170,7 @@ export default async function ProfessionalPage({ params }: Props) {
               />
             )}
           </div>
+        </div>
         </div>
       </div>
 
