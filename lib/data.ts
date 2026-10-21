@@ -2,14 +2,26 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import type { Barber, Establishment, Profile } from '@/lib/types'
 
-/** O estabelecimento do deploy (o primeiro criado). */
-export async function getEstablishment(): Promise<Establishment | null> {
+/**
+ * Todos os espaços cadastrados (público). Cada profissional
+ * independente tem o seu — a plataforma mostra todos.
+ */
+export async function getEstablishments(): Promise<Establishment[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('establishments')
     .select('*')
-    .order('created_at')
-    .limit(1)
+    .order('name')
+  return (data ?? []) as Establishment[]
+}
+
+/** Um espaço por id (público). */
+export async function getEstablishmentById(id: string): Promise<Establishment | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('establishments')
+    .select('*')
+    .eq('id', id)
     .maybeSingle()
   return (data as Establishment | null) ?? null
 }
@@ -27,9 +39,46 @@ export async function getCurrentUser(): Promise<{ id: string; profile: Profile |
   return { id: data.user.id, profile: (profile as Profile | null) ?? null }
 }
 
+type Supabase = Awaited<ReturnType<typeof createClient>>
+
+/**
+ * O espaço de trabalho que o usuário logado administra:
+ * o espaço que ele criou (dono) ou do qual foi convidado.
+ * Superadmins sem espaço próprio recebem null (onboarding).
+ */
+export async function getMyWorkspace(supabase: Supabase): Promise<Establishment | null> {
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return null
+
+  const [{ data: memberRows }, { data: ownedRows }] = await Promise.all([
+    supabase
+      .from('establishment_admins')
+      .select('establishment_id')
+      .eq('profile_id', auth.user.id),
+    supabase
+      .from('establishments')
+      .select('id')
+      .eq('owner_id', auth.user.id)
+      .limit(1),
+  ])
+
+  const ids = new Set<string>()
+  for (const r of (memberRows ?? []) as { establishment_id: string }[]) ids.add(r.establishment_id)
+  for (const r of (ownedRows ?? []) as { id: string }[]) ids.add(r.id)
+  if (ids.size === 0) return null
+
+  const { data } = await supabase
+    .from('establishments')
+    .select('*')
+    .in('id', [...ids])
+    .order('created_at')
+    .limit(1)
+  return (data?.[0] as Establishment | undefined) ?? null
+}
+
 /** Usado nas páginas admin: exige sessão + papel admin (redireciona). */
 export async function requireAdminPage(): Promise<{
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Supabase
   user: { id: string; email?: string }
   profile: Profile
   establishment: Establishment | null
@@ -46,7 +95,7 @@ export async function requireAdminPage(): Promise<{
 
   if (!profile || (profile as Profile).role !== 'admin') redirect('/')
 
-  const establishment = await getEstablishment()
+  const establishment = await getMyWorkspace(supabase)
 
   return {
     supabase,
@@ -56,8 +105,16 @@ export async function requireAdminPage(): Promise<{
   }
 }
 
-/** Usado em Server Actions: retorna null se não for admin. */
-export async function requireAdminAction(): Promise<Awaited<ReturnType<typeof createClient>> | null> {
+/**
+ * Usado em Server Actions: exige admin e devolve o espaço dele.
+ * Retorna null se não houver sessão/papel — actions respondem
+ * "Sem permissão." Um admin sem espaço recebe establishment null
+ * e a action orienta a criar o espaço primeiro.
+ */
+export async function requireAdminAction(): Promise<{
+  supabase: Supabase
+  establishment: Establishment | null
+} | null> {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return null
@@ -67,12 +124,13 @@ export async function requireAdminAction(): Promise<Awaited<ReturnType<typeof cr
     .eq('id', auth.user.id)
     .maybeSingle()
   if (!profile || profile.role !== 'admin') return null
-  return supabase
+  const establishment = await getMyWorkspace(supabase)
+  return { supabase, establishment }
 }
 
 /** Usado nas páginas do portal do barbeiro: exige papel 'barber' + vínculo. */
 export async function requireBarberPage(): Promise<{
-  supabase: Awaited<ReturnType<typeof createClient>>
+  supabase: Supabase
   user: { id: string; email?: string }
   profile: Profile
   barber: Barber
@@ -108,7 +166,7 @@ export async function requireBarberPage(): Promise<{
   }
 }
 
-/** Barbeiros ativos do estabelecimento. */
+/** Barbeiros ativos de um espaço. */
 export async function getActiveBarbers(establishmentId: string): Promise<Barber[]> {
   const supabase = await createClient()
   const { data } = await supabase

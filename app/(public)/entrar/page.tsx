@@ -18,13 +18,13 @@ export default async function EntrarPage({
         <h1 className="font-serif text-2xl font-bold uppercase tracking-tight text-stone-100">
           Bem-vindo de volta
         </h1>
-        <p className="mb-6 mt-1 text-sm text-stone-500">
+        <p className="mb-6 mt-1 text-sm text-stone-400">
           Entre para gerenciar seus agendamentos e pedidos.
         </p>
 
         <LoginForm next={next} />
 
-        <p className="mt-6 text-center text-sm text-stone-500">
+        <p className="mt-6 text-center text-sm text-stone-400">
           Ainda não tem conta?{' '}
           <Link href="/registrar" className="font-medium text-amber-400 hover:text-amber-300">
             Cadastre-se

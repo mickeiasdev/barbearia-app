@@ -72,7 +72,7 @@ export default function AdminSidebar({
             <span className="block truncate font-serif text-sm font-bold uppercase tracking-wide text-stone-100">
               {APP_NAME}
             </span>
-            <span className="block truncate text-[11px] text-stone-500">Painel admin</span>
+            <span className="block truncate text-[11px] text-stone-400">Painel admin</span>
           </span>
         </Link>
 
@@ -83,7 +83,7 @@ export default function AdminSidebar({
         </nav>
 
         <div className="mt-4 border-t border-stone-800/80 pt-4">
-          <p className="truncate px-3 pb-1 text-xs text-stone-500">
+          <p className="truncate px-3 pb-1 text-xs text-stone-400">
             {establishmentName ?? 'Configure o estabelecimento'}
           </p>
           <Link

@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation'
 import { friendlyDbError } from '@/lib/utils'
 
 /**
- * Barbeiro confirma (pending -> confirmed) ou conclui (-> completed)
- * um atendimento DELE. A policy RLS garante que só pode tocar nos
- * próprios agendamentos e apenas nesses dois status.
+ * Barbeiro confirma (pending -> confirmed), conclui (-> completed) ou
+ * marca não compareceu (-> no_show) um atendimento DELE. A policy RLS
+ * garante que só pode tocar nos próprios agendamentos e nesses status.
  */
 export async function barberSetStatusAction(formData: FormData) {
   const supabase = await createClient()
@@ -18,7 +18,7 @@ export async function barberSetStatusAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   const status = String(formData.get('status') ?? '')
 
-  if (!['confirmed', 'completed'].includes(status)) {
+  if (!['confirmed', 'completed', 'no_show'].includes(status)) {
     redirect('/barbeiro?erro=' + encodeURIComponent('Status inválido.'))
   }
 

@@ -1,13 +1,13 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { requireAdminAction, getEstablishment } from '@/lib/data'
+import { requireAdminAction } from '@/lib/data'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { friendlyDbError, parsePriceToCents } from '@/lib/utils'
 import { dayTimeLabel, shortDateLabel, spDateTimeToUTC } from '@/lib/tz'
 import { sendEmail, emailHtml } from '@/lib/email'
-import type { Barber, Establishment, Service } from '@/lib/types'
+import type { Barber, Service } from '@/lib/types'
 
 /** Envia uma imagem para o bucket público "media" e devolve a URL. */
 async function uploadImage(
@@ -46,10 +46,13 @@ export async function saveEstablishmentAction(
   _prev: AdminFormState,
   formData: FormData
 ): Promise<AdminFormState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase, establishment } = admin
+  if (!establishment) {
+    return { error: 'Crie seu espaço primeiro na página inicial do painel.' }
+  }
 
-  const id = String(formData.get('id') ?? '').trim() || null
   const name = String(formData.get('name') ?? '').trim()
   const address = String(formData.get('address') ?? '').trim() || null
   const phone = String(formData.get('phone') ?? '').trim() || null
@@ -59,7 +62,17 @@ export async function saveEstablishmentAction(
   const closingTime = String(formData.get('closing_time') ?? '19:00')
   const step = Number(formData.get('slot_step_min') ?? 15)
 
-  if (!name) return { error: 'Informe o nome da barbearia.' }
+  // link público (/p/slug) e flag de pagamento antecipado
+  const slugInput = String(formData.get('slug') ?? '').trim().toLowerCase() || null
+  const requirePrepayment = formData.get('require_prepayment') !== null
+  if (slugInput !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
+    return { error: 'O endereço do perfil deve ter só letras minúsculas, números e hífens (ex.: studio-joao).' }
+  }
+  if (slugInput !== null && (slugInput.length < 2 || slugInput.length > 60)) {
+    return { error: 'O endereço do perfil deve ter entre 2 e 60 caracteres.' }
+  }
+
+  if (!name) return { error: 'Informe o nome do seu espaço.' }
   if (openingTime >= closingTime) return { error: 'O horário de abertura deve ser antes do fechamento.' }
   if (!Number.isInteger(step) || step < 5 || step > 60) {
     return { error: 'O intervalo entre horários deve ficar entre 5 e 60 minutos.' }
@@ -75,11 +88,14 @@ export async function saveEstablishmentAction(
     opening_time: openingTime,
     closing_time: closingTime,
     slot_step_min: step,
+    ...(slugInput !== null ? { slug: slugInput } : {}),
+    require_prepayment: requirePrepayment,
   }
 
-  const { error } = id
-    ? await supabase.from('establishments').update(values).eq('id', id)
-    : await supabase.from('establishments').insert(values)
+  const { error } = await supabase
+    .from('establishments')
+    .update(values)
+    .eq('id', establishment.id)
 
   if (error) return { error: friendlyDbError(error.message) }
 
@@ -94,10 +110,11 @@ export async function saveBarberAction(
   _prev: AdminFormState,
   formData: FormData
 ): Promise<AdminFormState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
 
-  const establishment = (await getEstablishment()) as Establishment | null
+  const establishment = admin.establishment
   if (!establishment) {
     return { error: 'Configure o estabelecimento em Configurações antes de cadastrar barbeiros.' }
   }
@@ -195,8 +212,9 @@ export async function saveBarberAction(
 }
 
 export async function toggleBarberAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { data } = await supabase.from('barbers').select('is_active').eq('id', id).maybeSingle()
@@ -210,8 +228,9 @@ export async function toggleBarberAction(formData: FormData) {
 }
 
 export async function deleteBarberAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { error } = await supabase.from('barbers').delete().eq('id', id)
@@ -234,10 +253,11 @@ export async function saveServiceAction(
   _prev: AdminFormState,
   formData: FormData
 ): Promise<AdminFormState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
 
-  const establishment = (await getEstablishment()) as Establishment | null
+  const establishment = admin.establishment
   if (!establishment) {
     return { error: 'Configure o estabelecimento em Configurações primeiro.' }
   }
@@ -271,8 +291,9 @@ export async function saveServiceAction(
 }
 
 export async function toggleServiceAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { data } = await supabase.from('services').select('is_active').eq('id', id).maybeSingle()
@@ -287,8 +308,9 @@ export async function toggleServiceAction(formData: FormData) {
 }
 
 export async function deleteServiceAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { error } = await supabase.from('services').delete().eq('id', id)
@@ -312,10 +334,11 @@ export async function saveProductAction(
   _prev: AdminFormState,
   formData: FormData
 ): Promise<AdminFormState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
 
-  const establishment = (await getEstablishment()) as Establishment | null
+  const establishment = admin.establishment
   if (!establishment) {
     return { error: 'Configure o estabelecimento em Configurações primeiro.' }
   }
@@ -364,8 +387,9 @@ export async function saveProductAction(
 }
 
 export async function toggleProductAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { data } = await supabase.from('products').select('is_active').eq('id', id).maybeSingle()
@@ -379,8 +403,9 @@ export async function toggleProductAction(formData: FormData) {
 }
 
 export async function deleteProductAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
   const id = String(formData.get('id') ?? '')
 
   const { error } = await supabase.from('products').delete().eq('id', id)
@@ -397,14 +422,15 @@ export async function deleteProductAction(formData: FormData) {
 // AGENDAMENTOS
 // ============================================================
 export async function setAppointmentStatusAction(formData: FormData) {
-  const supabase = await requireAdminAction()
-  if (!supabase) redirect('/entrar?next=/admin')
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase } = admin
 
   const id = String(formData.get('id') ?? '')
   const status = String(formData.get('status') ?? '')
   const back = String(formData.get('back') ?? '/admin/agendamentos') || '/admin/agendamentos'
 
-  if (!['pending', 'confirmed', 'completed', 'cancelled'].includes(status)) {
+  if (!['pending', 'confirmed', 'completed', 'cancelled', 'no_show'].includes(status)) {
     redirect(back + (back.includes('?') ? '&' : '?') + 'erro=' + encodeURIComponent('Status inválido.'))
   }
 
@@ -481,8 +507,9 @@ export async function adminCreateAppointmentAction(
   _prev: AdminFormState,
   formData: FormData
 ): Promise<AdminFormState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
 
   const clientId = String(formData.get('client_id') ?? '').trim()
   const serviceId = String(formData.get('service_id') ?? '').trim()
@@ -585,8 +612,9 @@ export async function adminPlaceOrderAction(
   _prev: PosState,
   formData: FormData
 ): Promise<PosState> {
-  const supabase = await requireAdminAction()
-  if (!supabase) return { error: 'Sem permissão.' }
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
 
   let items: { product_id: string; quantity: number }[] = []
   try {
@@ -603,17 +631,339 @@ export async function adminPlaceOrderAction(
     return { error: 'Forma de pagamento inválida.' }
   }
 
+  // desconto informado no PDV (R$, aceita "10" ou "10,00")
+  const discountInput = String(formData.get('discount') ?? '').trim() || '0'
+  const discountCents = parsePriceToCents(discountInput) ?? 0
+  if (discountCents < 0) return { error: 'Desconto inválido.' }
+
   const { data, error } = await supabase.rpc('place_order', {
     p_items: items,
     p_client_id: clientId,
     p_payment_method: paymentMethod,
+    p_discount_cents: discountCents,
   })
   if (error) return { error: friendlyDbError(error.message) }
 
-  const displayTotal = Number(formData.get('display_total') ?? 0) || 0
+  const displayTotal =
+    (Number(formData.get('display_gross') ?? 0) || 0) - discountCents
 
   revalidatePath('/admin/vendas')
   revalidatePath('/admin/produtos')
   revalidatePath('/admin')
   return { ok: true, orderId: String(data), totalCents: displayTotal }
+}
+
+// ============================================================
+// ADMINISTRADORES DO ESPAÇO (vários admins por espaço)
+// ============================================================
+export async function addSpaceAdminAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase, establishment } = admin
+  if (!establishment) return { error: 'Crie seu espaço primeiro.' }
+
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  if (!email.includes('@')) return { error: 'Informe um e-mail válido.' }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, full_name, role')
+    .ilike('email', email)
+    .maybeSingle()
+  const p = profile as { id: string; full_name: string; role: string } | null
+  if (!p) {
+    return {
+      error:
+        'Não encontramos uma conta com este e-mail. A pessoa precisa se cadastrar no site primeiro.',
+    }
+  }
+
+  const { error: insertError } = await supabase
+    .from('establishment_admins')
+    .insert({ establishment_id: establishment.id, profile_id: p.id })
+  if (insertError) {
+    if (insertError.code === '23505') {
+      return { error: 'Esta pessoa já administra este espaço.' }
+    }
+    return { error: friendlyDbError(insertError.message) }
+  }
+
+  // promove a 'admin' para ela acessar o painel (RLS + trigger validam)
+  if (p.role === 'client' || p.role === 'barber') {
+    await supabase
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', p.id)
+      .eq('role', p.role)
+  }
+
+  revalidatePath('/admin/configuracoes')
+  return { ok: true, notice: p.full_name.split(' ')[0] + ' agora administra este espaço.' }
+}
+
+export async function removeSpaceAdminAction(formData: FormData) {
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin')
+  const { supabase, establishment } = admin
+  if (!establishment) redirect('/admin')
+
+  const id = String(formData.get('id') ?? '')
+
+  // o dono não sai pela UI; ninguém remove a si mesma
+  if (establishment.owner_id === id) {
+    redirect('/admin/configuracoes?erro=' + encodeURIComponent('O dono do espaço não pode ser removido por aqui.'))
+  }
+  const { data: auth } = await supabase.auth.getUser()
+  if (auth.user?.id === id) {
+    redirect('/admin/configuracoes?erro=' + encodeURIComponent('Para deixar de administrar este espaço, fale com o dono.'))
+  }
+
+  const { error } = await supabase
+    .from('establishment_admins')
+    .delete()
+    .eq('establishment_id', establishment.id)
+    .eq('profile_id', id)
+  if (error) {
+    redirect('/admin/configuracoes?erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+
+  // se a pessoa não administra mais nenhum espaço, volta a cliente
+  const [{ data: memberships }, { data: owned }] = await Promise.all([
+    supabase.from('establishment_admins').select('establishment_id').eq('profile_id', id),
+    supabase.from('establishments').select('id').eq('owner_id', id).limit(1),
+  ])
+  if ((memberships ?? []).length === 0 && (owned ?? []).length === 0) {
+    await supabase.from('profiles').update({ role: 'client' }).eq('id', id).eq('role', 'admin')
+  }
+
+  revalidatePath('/admin/configuracoes')
+  redirect('/admin/configuracoes?ok=1')
+}
+
+
+// ============================================================
+// REMARCAÇÃO DE AGENDAMENTO PELO ADMIN
+// ============================================================
+export async function adminRescheduleAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
+
+  const id = String(formData.get('id') ?? '')
+  const serviceId = String(formData.get('service_id') ?? '').trim()
+  const barberId = String(formData.get('barber_id') ?? '').trim()
+  const dateKey = String(formData.get('data') ?? '')
+  const time = String(formData.get('hora') ?? '')
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !/^\d{2}:\d{2}$/.test(time)) {
+    return { error: 'Data ou horário inválido.' }
+  }
+
+  const { data: service } = await supabase
+    .from('services')
+    .select('*')
+    .eq('id', serviceId)
+    .maybeSingle()
+  if (!service) return { error: 'Serviço não encontrado.' }
+  const svc = service as Service
+
+  const { data: barber } = await supabase
+    .from('barbers')
+    .select('*')
+    .eq('id', barberId)
+    .maybeSingle()
+  if (!barber) return { error: 'Barbeiro não encontrado.' }
+  const brb = barber as Barber
+
+  const startsAt = spDateTimeToUTC(dateKey, time)
+  const endsAt = new Date(startsAt.getTime() + svc.duration_min * 60000)
+  if (startsAt.getTime() <= Date.now()) {
+    return { error: 'Escolha um horário futuro.' }
+  }
+
+  const { data: slotsData } = await supabase.rpc('get_available_slots', {
+    p_barber_id: barberId,
+    p_date: dateKey,
+    p_duration_min: svc.duration_min,
+  })
+  const slots = (slotsData as unknown as string[]) ?? []
+  if (!slots.some((s) => new Date(s).getTime() === startsAt.getTime())) {
+    return { error: 'Este horário não está disponível (ocupado, fora da jornada ou em folga). Ele já pode ter sido escolhido por outra pessoa.' }
+  }
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({
+      barber_id: barberId,
+      service_id: serviceId,
+      starts_at: startsAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      price_cents: svc.price_cents,
+    })
+    .eq('id', id)
+  if (error) return { error: friendlyDbError(error.message) }
+
+  // avisa o cliente do novo horário
+  const { data: appt } = await supabase
+    .from('appointments')
+    .select('starts_at, client:profiles!appointments_client_id_fkey(email, full_name)')
+    .eq('id', id)
+    .maybeSingle()
+  const row = appt as unknown as {
+    client: { email: string | null } | null
+  } | null
+  if (row?.client?.email) {
+    await sendEmail(
+      row.client.email,
+      'Seu atendimento foi remarcado',
+      emailHtml('Atendimento remarcado!', [
+        'A barbearia remarcou seu atendimento para <strong>' +
+          shortDateLabel(dateKey) + ' às ' + time + '</strong> (horário de Brasília).',
+        'Novo serviço: <strong>' + svc.name + '</strong>.',
+        'Se o novo horário não servir, você pode reagendar em Minha Conta.',
+      ])
+    )
+  }
+
+  revalidatePath('/admin/agendamentos')
+  revalidatePath('/admin')
+  revalidatePath('/minha-conta')
+  return { ok: true, notice: 'Atendimento remarcado para ' + shortDateLabel(dateKey) + ' às ' + time + '.' }
+}
+
+// ============================================================
+// FOLGAS PONTUAIS / BLOQUEIO DE HORÁRIO
+// ============================================================
+export async function saveTimeOffAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
+
+  const barberId = String(formData.get('barber_id') ?? '').trim()
+  const day = String(formData.get('day') ?? '')
+  const startTime = String(formData.get('start_time') ?? '00:00')
+  const endTime = String(formData.get('end_time') ?? '23:59')
+  const reason = String(formData.get('reason') ?? '').trim() || null
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return { error: 'Informe a data da folga.' }
+  if (startTime >= endTime) return { error: 'O início deve ser antes do fim do bloqueio.' }
+
+  const { data: barber } = await supabase
+    .from('barbers')
+    .select('id')
+    .eq('id', barberId)
+    .maybeSingle()
+  if (!barber) return { error: 'Barbeiro não encontrado.' }
+
+  const { error } = await supabase.from('barber_time_off').insert({
+    barber_id: barberId,
+    day,
+    start_time: startTime,
+    end_time: endTime,
+    reason,
+  })
+  if (error) return { error: friendlyDbError(error.message) }
+
+  revalidatePath('/admin/barbeiros')
+  revalidatePath('/agendar')
+  return { ok: true, notice: 'Bloqueio registrado.' }
+}
+
+export async function deleteTimeOffAction(formData: FormData) {
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin/barbeiros')
+  const { supabase } = admin
+
+  const id = String(formData.get('id') ?? '')
+  const { error } = await supabase.from('barber_time_off').delete().eq('id', id)
+  if (error) {
+    redirect('/admin/barbeiros?erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+  revalidatePath('/admin/barbeiros')
+  revalidatePath('/agendar')
+  redirect('/admin/barbeiros?ok=1')
+}
+
+// ============================================================
+// PORTFÓLIO DE FOTOS DO BARBEIRO
+// ============================================================
+export async function uploadPortfolioPhotoAction(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const admin = await requireAdminAction()
+  if (!admin) return { error: 'Sem permissão.' }
+  const { supabase } = admin
+
+  const barberId = String(formData.get('barber_id') ?? '').trim()
+  const caption = String(formData.get('caption') ?? '').trim() || null
+  const file = formData.get('photo_file')
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: 'Escolha uma imagem para enviar.' }
+  }
+
+  const { data: barber } = await supabase
+    .from('barbers')
+    .select('id')
+    .eq('id', barberId)
+    .maybeSingle()
+  if (!barber) return { error: 'Barbeiro não encontrado.' }
+
+  const uploaded = await uploadImage(supabase, file, 'portfolio')
+  if ('error' in uploaded) return { error: uploaded.error }
+
+  const { error } = await supabase.from('barber_photos').insert({
+    barber_id: barberId,
+    url: uploaded.url,
+    caption,
+  })
+  if (error) return { error: friendlyDbError(error.message) }
+
+  revalidatePath('/admin/barbeiros')
+  revalidatePath('/barbeiros')
+  revalidatePath('/')
+  return { ok: true, notice: 'Foto adicionada ao portfólio.' }
+}
+
+export async function deletePortfolioPhotoAction(formData: FormData) {
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin/barbeiros')
+  const { supabase } = admin
+
+  const id = String(formData.get('id') ?? '')
+  const { error } = await supabase.from('barber_photos').delete().eq('id', id)
+  if (error) {
+    redirect('/admin/barbeiros?erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+  revalidatePath('/admin/barbeiros')
+  revalidatePath('/barbeiros')
+  redirect('/admin/barbeiros?ok=1')
+}
+
+// ============================================================
+// ESTORNO DE VENDA (devolve estoque)
+// ============================================================
+export async function refundOrderAction(formData: FormData) {
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin/vendas')
+  const { supabase } = admin
+
+  const id = String(formData.get('id') ?? '')
+  const { error } = await supabase.rpc('refund_order', { p_order_id: id })
+  if (error) {
+    redirect('/admin/vendas?erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+  revalidatePath('/admin/vendas')
+  revalidatePath('/admin')
+  redirect('/admin/vendas?ok=estornado')
 }

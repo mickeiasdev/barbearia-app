@@ -12,6 +12,7 @@ import {
   todayKey,
 } from '@/lib/tz'
 import StatusBadge from '@/components/status-badge'
+import ActionButton from '@/components/admin/action-button'
 import { barberSetStatusAction } from '@/actions/barber'
 import type { AppointmentDetails } from '@/lib/types'
 
@@ -79,7 +80,7 @@ export default async function BarbeiroHomePage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="section-title">Olá, {barber.full_name.split(' ')[0]}</h1>
-          <p className="mt-1 text-sm text-stone-500">
+          <p className="mt-1 text-sm text-stone-400">
             {shortDateLabel(today)} · comissão {barber.commission_pct}%
           </p>
         </div>
@@ -93,7 +94,7 @@ export default async function BarbeiroHomePage({
         {kpis.map((kpi) => (
           <div key={kpi.label} className="card p-5">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-stone-500">{kpi.label}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-stone-400">{kpi.label}</p>
               <kpi.icon className="h-4 w-4 text-amber-500" />
             </div>
             <p className="mt-2 text-2xl font-bold text-stone-100">{kpi.value}</p>
@@ -106,7 +107,7 @@ export default async function BarbeiroHomePage({
         <h2 className="font-semibold text-stone-100">Agenda de hoje</h2>
 
         {todayAppointments.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-500">Nenhum atendimento hoje. Aproveite o dia!</p>
+          <p className="mt-4 text-sm text-stone-400">Nenhum atendimento hoje. Aproveite o dia!</p>
         ) : (
           <div className="mt-4 divide-y divide-stone-800/70">
             {todayAppointments.map((appt) => (
@@ -116,20 +117,33 @@ export default async function BarbeiroHomePage({
                     <span className="font-mono text-amber-400">{timeInSP(appt.starts_at)}</span>{' '}
                     — {appt.client?.full_name ?? 'Cliente'}
                     {appt.client?.phone && (
-                      <span className="ml-1 text-xs text-stone-600">({appt.client.phone})</span>
+                      <span className="ml-1 text-xs text-stone-400">({appt.client.phone})</span>
                     )}
                   </p>
-                  <p className="mt-0.5 text-xs text-stone-500">
+                  <p className="mt-0.5 text-xs text-stone-400">
                     {appt.service?.name} · {formatDuration(appt.service?.duration_min ?? 30)} ·{' '}
                     {formatBRL(appt.price_cents)}
                   </p>
                   {appt.notes && (
-                    <p className="mt-0.5 text-xs italic text-stone-600">“{appt.notes}”</p>
+                    <p className="mt-0.5 text-xs italic text-stone-400">“{appt.notes}”</p>
                   )}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <StatusBadge status={appt.status} />
+                  {(appt.status === 'pending' || appt.status === 'confirmed') && (
+                    <form action={barberSetStatusAction}>
+                      <input type="hidden" name="id" value={appt.id} />
+                      <input type="hidden" name="status" value="no_show" />
+                      <ActionButton
+                        className="btn btn-danger btn-sm"
+                        pendingLabel="Salvando..."
+                        confirmMessage="Marcar como não compareceu?"
+                      >
+                        Não compareceu
+                      </ActionButton>
+                    </form>
+                  )}
                   {appt.status === 'pending' && (
                     <form action={barberSetStatusAction}>
                       <input type="hidden" name="id" value={appt.id} />
@@ -159,7 +173,7 @@ export default async function BarbeiroHomePage({
       <section className="card mt-6 p-6">
         <h2 className="font-semibold text-stone-100">Próximos 7 dias</h2>
         {byDay.size === 0 ? (
-          <p className="mt-4 text-sm text-stone-500">Nada agendado nos próximos dias ainda.</p>
+          <p className="mt-4 text-sm text-stone-400">Nada agendado nos próximos dias ainda.</p>
         ) : (
           <div className="mt-4 space-y-4">
             {[...byDay.entries()].map(([day, appts]) => (

@@ -14,12 +14,17 @@ export default function CancelAppointmentButton({ id }: { id: string }) {
     <form action={formAction}>
       <input type="hidden" name="id" value={id} />
       {state.error && (
-        <p className="mb-2 text-right text-xs text-red-400">{state.error}</p>
+        <p className="mb-2 text-right text-xs text-red-400" role="alert">{state.error}</p>
       )}
       <button
         type="submit"
         disabled={isPending || state.ok === true}
         className="btn btn-danger btn-sm w-full"
+        onClick={(e) => {
+          if (!window.confirm('Cancelar este agendamento? O horário será liberado para outras pessoas.')) {
+            e.preventDefault()
+          }
+        }}
       >
         <X className="h-3.5 w-3.5" />
         {isPending ? 'Cancelando...' : state.ok ? 'Cancelado' : 'Cancelar agendamento'}

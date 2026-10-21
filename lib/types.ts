@@ -22,7 +22,18 @@ export interface Establishment {
   opening_time: string
   closing_time: string
   slot_step_min: number
+  owner_id: string | null
+  slug: string | null
+  require_prepayment: boolean
+  plan: string
   created_at: string
+}
+
+export interface EstablishmentAdmin {
+  establishment_id: string
+  profile_id: string
+  created_at: string
+  profile?: { full_name: string; email: string | null } | null
 }
 
 export interface Barber {
@@ -125,4 +136,6 @@ export interface CartItem {
   price_cents: number
   quantity: number
   stock: number
+  establishment_id: string
+  establishment_name: string
 }

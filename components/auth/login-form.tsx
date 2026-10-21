@@ -1,5 +1,6 @@
 "use client"
 
+import Link from 'next/link'
 import { useActionState } from 'react'
 import { LogIn } from 'lucide-react'
 import { loginAction, type AuthState } from '@/actions/auth'
@@ -46,6 +47,15 @@ export default function LoginForm({ next }: { next: string }) {
         <LogIn className="h-4 w-4" />
         {isPending ? 'Entrando...' : 'Entrar'}
       </button>
+
+      <p className="text-center">
+        <Link
+          href="/recuperar-senha"
+          className="text-xs font-medium text-stone-400 underline-offset-4 hover:text-amber-400 hover:underline"
+        >
+          Esqueci minha senha
+        </Link>
+      </p>
     </form>
   )
 }

@@ -132,7 +132,7 @@ export default async function AdminRelatoriosPage({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="section-title">Relatórios</h1>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-stone-400">
             Receita, comissões dos barbeiros e exportação para contabilidade.
           </p>
         </div>
@@ -162,26 +162,26 @@ export default async function AdminRelatoriosPage({
       {/* KPIs */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Receita serviços</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Receita serviços</p>
           <p className="mt-2 text-2xl font-bold text-stone-100">{formatBRL(servicesRevenue)}</p>
-          <p className="mt-0.5 text-[11px] text-stone-600">{monthAppts.length} atendimentos concluídos</p>
+          <p className="mt-0.5 text-[11px] text-stone-400">{monthAppts.length} atendimentos concluídos</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Receita produtos</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Receita produtos</p>
           <p className="mt-2 text-2xl font-bold text-stone-100">{formatBRL(productsRevenue)}</p>
-          <p className="mt-0.5 text-[11px] text-stone-600">{monthOrders.length} pedidos pagos</p>
+          <p className="mt-0.5 text-[11px] text-stone-400">{monthOrders.length} pedidos pagos</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Receita total</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Receita total</p>
           <p className="mt-2 text-2xl font-bold text-amber-500">{formatBRL(totalRevenue)}</p>
-          <p className="mt-0.5 text-[11px] text-stone-600">serviços + produtos</p>
+          <p className="mt-0.5 text-[11px] text-stone-400">serviços + produtos</p>
         </div>
         <div className="card p-5">
-          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total comissões</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-400">Total comissões</p>
           <p className="mt-2 text-2xl font-bold text-stone-100">
             {formatBRL(commissions.reduce((acc, [, b]) => acc + b.commission, 0))}
           </p>
-          <p className="mt-0.5 text-[11px] text-stone-600">a pagar aos barbeiros</p>
+          <p className="mt-0.5 text-[11px] text-stone-400">a pagar aos barbeiros</p>
         </div>
       </div>
 
@@ -197,14 +197,14 @@ export default async function AdminRelatoriosPage({
             const short = monthLabel(k).split(' de ')[0].slice(0, 3)
             return (
               <div key={k} className="flex flex-1 flex-col items-center gap-2">
-                <span className="text-[10px] text-stone-500">
+                <span className="text-[10px] text-stone-400">
                   {value > 0 ? formatBRL(value) : ''}
                 </span>
                 <div
                   className={'w-full rounded-t-md ' + (k === mes ? 'bg-amber-500' : 'bg-amber-500/30')}
                   style={{ height: heightPct + '%' }}
                 />
-                <span className="text-[10px] capitalize text-stone-500">{short}</span>
+                <span className="text-[10px] capitalize text-stone-400">{short}</span>
               </div>
             )
           })}
@@ -229,7 +229,7 @@ export default async function AdminRelatoriosPage({
                 <tr key={name}>
                   <td className="table-cell font-medium text-stone-100">
                     {name}
-                    <span className="ml-1 text-xs text-stone-600">({b.pct}%)</span>
+                    <span className="ml-1 text-xs text-stone-400">({b.pct}%)</span>
                   </td>
                   <td className="table-cell">{b.count}</td>
                   <td className="table-cell">{formatBRL(b.revenue)}</td>
@@ -240,7 +240,7 @@ export default async function AdminRelatoriosPage({
               ))}
               {commissions.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="table-cell py-8 text-center text-stone-500">
+                  <td colSpan={4} className="table-cell py-8 text-center text-stone-400">
                     Nenhum atendimento concluído neste mês.
                   </td>
                 </tr>
@@ -265,7 +265,7 @@ export default async function AdminRelatoriosPage({
               </li>
             ))}
             {topClients.length === 0 && (
-              <li className="text-sm text-stone-500">Sem movimento neste mês.</li>
+              <li className="text-sm text-stone-400">Sem movimento neste mês.</li>
             )}
           </ul>
 

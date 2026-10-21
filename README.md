@@ -2,7 +2,7 @@
 
 ![Next.js](https://img.shields.io/badge/Next.js%2015-black?logo=nextdotjs) ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white) ![Tailwind](https://img.shields.io/badge/Tailwind%20CSS-06B6D4?logo=tailwindcss&logoColor=white) ![Vercel](https://img.shields.io/badge/Vercel-000?logo=vercel) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 
-Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + venda de produtos (loja online e PDV) + painel administrativo completo**, com **vários barbeiros por estabelecimento**. Pronta para deploy no **Vercel** com **Supabase** (Postgres + Auth + RLS).
+Aplicação **ponta a ponta** para barbearias: **agendamento de atendimentos + venda de produtos (loja online e PDV) + painel administrativo completo**. No modelo **multi-espaço**, cada barbeiro independente é o administrador do próprio espaço (serviços, produtos, agenda e Pix), vários profissionais convivem na mesma instalação e um espaço pode ter múltiplos administradores convidados. Inclui **folgas pontuais**, **no-show**, **remarcação no painel**, **avaliações com nota**, **portfólio de fotos**, **favoritos**, **caixa com desconto e estorno**, **perfil público `/p/slug`**, **Pix antecipado** e **lembretes automáticos 24h** (WhatsApp/e-mail). Pronta para deploy no **Vercel** com **Supabase** (Postgres + Auth + RLS).
 
 > Feita para o mercado brasileiro: preços em R$, fuso America/Sao_Paulo, pagamento no local (Pix/dinheiro/cartão) e botão de WhatsApp.
 
@@ -113,9 +113,11 @@ Funções e guardas no banco:
 - Cole TODO o conteúdo de [`supabase/migrations/0001_schema.sql`](supabase/migrations/0001_schema.sql) → **Run**;
 - Repita com [`supabase/migrations/0002_barber_portal.sql`](supabase/migrations/0002_barber_portal.sql) (portal do barbeiro + reagendamento) → **Run**;
 - E com [`supabase/migrations/0003_pix_storage.sql`](supabase/migrations/0003_pix_storage.sql) (chave Pix + bucket de imagens) → **Run**;
+- E com [`supabase/migrations/0004_multi_workspace.sql`](supabase/migrations/0004_multi_workspace.sql) (**multi-espaço**: cada barbeiro é admin do próprio espaço; RLS por espaço; `create_workspace`) → **Run**;
+- E com [`supabase/migrations/0005_new_features.sql`](supabase/migrations/0005_new_features.sql) (**novos recursos**: folgas pontuais, portfólio, avaliações, favoritos, no-show, desconto/estorno no PDV, perfil público `/p/slug`, lembretes 24h, Pix antecipado) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
-### 3. Promover você a administrador
+### 3. Promover você a administrador da PLATAFORMA
 Escolha UMA das opções (rode no SQL Editor):
 
 - **Antes de se cadastrar:**
@@ -132,8 +134,20 @@ insert into public.admin_emails (email) values ('seu-email@exemplo.com');
 update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 ```
 
+### 3b. Como funciona o multi-espaço (vários profissionais)
+- **Cada barbeiro é dono do próprio espaço.** Ao se cadastrar como **Profissional** (ou tocando em "Criar meu espaço" em Minha Conta), a pessoa ganha um espaço de trabalho com agenda, serviços, produtos, Pix e painel próprios — isolados dos demais por RLS.
+- **Um espaço pode ter vários administradores**: em *Painel Admin → Configurações → Administradores do espaço*, o dono convida qualquer conta por e-mail, sem SQL.
+- **E-mails em `admin_emails` são superadmins da plataforma**: enxergam e gerenciam todos os espaços (suporte) e podem "adotar" espaços antigos sem dono no primeiro login.
+- **Clientes**: navegam por profissional (o wizard de agendamento começa pedindo o profissional) e veem os dados de cada espaço no site, na loja e nos Pix gerados.
+
 ### 4. Facilitar o login em desenvolvimento
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
+
+Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
+
+#### Opcionais pós-migração 0005
+- **Lembretes 24h**: configure `SUPABASE_SERVICE_ROLE_KEY` (Settings → API) e `CRON_SECRET` no `.env.local` — o cron diário (09:00 de Brasília) já vem agendado no `vercel.json` e chama `/api/cron/lembretes`.
+- **WhatsApp automático** (confirmações, lembretes, aviso de novo agendamento): configure `WHATSAPP_API_URL` e `WHATSAPP_API_TOKEN` com um gateway compatível (ex.: Z-API). Sem gateway, os avisos caem só no e-mail e os links wa.me continuam funcionando.
 
 ### 5. Rodar localmente
 

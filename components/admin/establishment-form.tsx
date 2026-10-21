@@ -60,11 +60,55 @@ export default function EstablishmentForm({
             className="input"
             placeholder="CPF/CNPJ, e-mail, telefone (+55...) ou chave aleatória"
           />
-          <p className="mt-1 text-[11px] text-stone-600">
+          <p className="mt-1 text-[11px] text-stone-400">
             Com a chave configurada, o site gera QR Code Pix automático para pedidos e agendamentos.
           </p>
         </div>
+
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor="est-slug">Endereço do perfil público</label>
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 text-sm text-stone-400">/p/</span>
+            <input
+              id="est-slug"
+              name="slug"
+              defaultValue={e?.slug ?? ''}
+              className="input"
+              placeholder="studio-joao"
+              inputMode="url"
+            />
+          </div>
+          <p className="mt-1 text-[11px] text-stone-400">
+            Link para divulgar no Instagram e na bio (ex.: /p/studio-joao). Só letras minúsculas,
+            números e hífens. Vazio = mantém o atual.
+          </p>
+        </div>
+
+        <div className="sm:col-span-2">
+          <label className="flex cursor-pointer items-start gap-2 text-sm text-stone-300">
+            <input
+              type="checkbox"
+              name="require_prepayment"
+              defaultChecked={e?.require_prepayment ?? false}
+              className="mt-0.5 h-4 w-4 accent-amber-500"
+            />
+            <span>
+              Solicitar pagamento antecipado via Pix
+              <span className="block text-xs text-stone-400">
+                Mostra o QR Code Pix assim que o cliente agenda, com aviso para enviar o
+                comprovante pelo WhatsApp. O horário só é confirmado quando você validar o
+                pagamento no painel.
+              </span>
+            </span>
+          </label>
+        </div>
       </div>
+
+      {e && (
+        <p className="text-xs text-stone-400">
+          Plano atual: <span className="font-medium text-amber-400">{e.plan === 'free' ? 'Grátis' : e.plan}</span>
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>

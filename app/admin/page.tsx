@@ -7,6 +7,7 @@ import {
   Scissors,
   Settings,
   TrendingUp,
+  UserX,
   X,
 } from 'lucide-react'
 import { requireAdminPage } from '@/lib/data'
@@ -23,6 +24,7 @@ import {
 import StatusBadge from '@/components/status-badge'
 import { setAppointmentStatusAction } from '@/actions/admin'
 import type { AppointmentDetails, Barber, Product, Service } from '@/lib/types'
+import ActionButton from '@/components/admin/action-button'
 
 export default async function AdminDashboardPage() {
   const { supabase, establishment } = await requireAdminPage()
@@ -35,7 +37,7 @@ export default async function AdminDashboardPage() {
         <h1 className="mt-4 font-serif text-2xl font-bold uppercase tracking-tight text-stone-100">
           Vamos começar!
         </h1>
-        <p className="mt-2 text-sm text-stone-500">
+        <p className="mt-2 text-sm text-stone-400">
           Cadastre os dados da barbearia para liberar barbeiros, serviços, produtos e
           o PDV.
         </p>
@@ -54,6 +56,7 @@ export default async function AdminDashboardPage() {
   const [
     { data: todayAppts },
     { count: pendingCount },
+    { count: monthNoShowCount },
     { data: monthCompletedData },
     { data: monthOrdersData },
     { data: lowStockData },
@@ -70,6 +73,12 @@ export default async function AdminDashboardPage() {
       .from('appointments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending'),
+    supabase
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .gte('starts_at', month.start)
+      .lt('starts_at', month.end)
+      .eq('status', 'no_show'),
     supabase
       .from('appointments')
       .select('price_cents, service:services(name)')
@@ -115,6 +124,7 @@ export default async function AdminDashboardPage() {
     { label: 'Aguardando confirmação', value: String(pendingCount ?? 0), icon: Receipt, hint: 'ação necessária' },
     { label: 'Receita do mês', value: formatBRL(monthRevenue), icon: TrendingUp, hint: 'serviços + produtos' },
     { label: 'Estoque baixo', value: String(lowStock.length), icon: Package, hint: '5 ou menos unidades' },
+    { label: 'No-show no mês', value: String(monthNoShowCount ?? 0), icon: UserX, hint: 'agendamentos não comparecidos' },
   ]
 
   return (
@@ -122,25 +132,25 @@ export default async function AdminDashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="section-title">Dashboard</h1>
-          <p className="mt-1 text-sm text-stone-500">{establishment.name}</p>
+          <p className="mt-1 text-sm text-stone-400">{establishment.name}</p>
         </div>
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-stone-400">
           {dateKey(new Date()).split('-').reverse().join('/')}
         </p>
       </div>
 
       {/* KPIs */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {kpis.map((kpi) => (
           <div key={kpi.label} className="card p-5">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-stone-400">
                 {kpi.label}
               </p>
               <kpi.icon className="h-4 w-4 text-amber-500" />
             </div>
             <p className="mt-2 text-2xl font-bold text-stone-100">{kpi.value}</p>
-            <p className="mt-0.5 text-[11px] text-stone-600">{kpi.hint}</p>
+            <p className="mt-0.5 text-[11px] text-stone-400">{kpi.hint}</p>
           </div>
         ))}
       </div>
@@ -153,7 +163,7 @@ export default async function AdminDashboardPage() {
           </h2>
 
           {todayAppointments.length === 0 ? (
-            <p className="mt-4 text-sm text-stone-500">
+            <p className="mt-4 text-sm text-stone-400">
               Nenhum agendamento para hoje.
             </p>
           ) : (
@@ -167,12 +177,12 @@ export default async function AdminDashboardPage() {
                       </span>{' '}
                       — {appt.client?.full_name ?? 'Cliente'}
                       {appt.client?.phone && (
-                        <span className="ml-1 text-xs text-stone-600">
+                        <span className="ml-1 text-xs text-stone-400">
                           ({appt.client.phone})
                         </span>
                       )}
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-stone-500">
+                    <p className="mt-0.5 truncate text-xs text-stone-400">
                       {appt.service?.name} com {appt.barber?.full_name} ·{' '}
                       {formatBRL(appt.price_cents)}
                     </p>
@@ -187,9 +197,9 @@ export default async function AdminDashboardPage() {
                             <input type="hidden" name="id" value={appt.id} />
                             <input type="hidden" name="status" value="confirmed" />
                             <input type="hidden" name="back" value="/admin" />
-                            <button type="submit" className="btn btn-outline btn-sm" title="Confirmar">
+                            <ActionButton className="btn btn-outline btn-sm" pendingLabel="Confirmando..." title="Confirmar">
                               <CheckCircle className="h-3.5 w-3.5" />
-                            </button>
+                            </ActionButton>
                           </form>
                         )}
                         {appt.status === 'confirmed' && (
@@ -197,18 +207,18 @@ export default async function AdminDashboardPage() {
                             <input type="hidden" name="id" value={appt.id} />
                             <input type="hidden" name="status" value="completed" />
                             <input type="hidden" name="back" value="/admin" />
-                            <button type="submit" className="btn btn-primary btn-sm" title="Concluir">
+                            <ActionButton className="btn btn-primary btn-sm" pendingLabel="Concluindo..." title="Concluir">
                               <CheckCircle className="h-3.5 w-3.5" />
-                            </button>
+                            </ActionButton>
                           </form>
                         )}
                         <form action={setAppointmentStatusAction}>
                           <input type="hidden" name="id" value={appt.id} />
                           <input type="hidden" name="status" value="cancelled" />
                           <input type="hidden" name="back" value="/admin" />
-                          <button type="submit" className="btn btn-danger btn-sm" title="Cancelar">
+                          <ActionButton className="btn btn-danger btn-sm" pendingLabel="Cancelando..." confirmMessage="Cancelar este agendamento? O horário será liberado." title="Cancelar">
                             <X className="h-3.5 w-3.5" />
-                          </button>
+                          </ActionButton>
                         </form>
                       </div>
                     )}
@@ -233,7 +243,7 @@ export default async function AdminDashboardPage() {
               <Package className="h-5 w-5 text-amber-500" /> Estoque baixo
             </h2>
             {lowStock.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-500">Todos os produtos com estoque saudável. ✓</p>
+              <p className="mt-4 text-sm text-stone-400">Todos os produtos com estoque saudável. ✓</p>
             ) : (
               <ul className="mt-4 space-y-2">
                 {lowStock.map((p) => (
@@ -256,7 +266,7 @@ export default async function AdminDashboardPage() {
               <Scissors className="h-5 w-5 text-amber-500" /> Top serviços do mês
             </h2>
             {topServices.length === 0 ? (
-              <p className="mt-4 text-sm text-stone-500">
+              <p className="mt-4 text-sm text-stone-400">
                 Nenhum atendimento concluído neste mês ainda.
               </p>
             ) : (

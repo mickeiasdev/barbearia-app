@@ -8,7 +8,15 @@ interface CartContextValue {
   count: number
   totalCents: number
   mounted: boolean
-  add: (item: { product_id: string; name: string; price_cents: number; stock: number; quantity?: number }) => void
+  add: (item: {
+    product_id: string
+    name: string
+    price_cents: number
+    stock: number
+    establishment_id: string
+    establishment_name: string
+    quantity?: number
+  }) => void
   setQty: (productId: string, qty: number) => void
   remove: (productId: string) => void
   clear: () => void
@@ -52,6 +60,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       add: (item) =>
         setItems((prev) => {
           const qty = item.quantity ?? 1
+          // um pedido por profissional: itens de outro espaço trocam o carrinho
+          if (prev.length > 0 && prev[0].establishment_id !== item.establishment_id) {
+            return [{ ...item, quantity: Math.min(qty, item.stock) }]
+          }
           const found = prev.find((p) => p.product_id === item.product_id)
           if (found) {
             return prev.map((p) =>

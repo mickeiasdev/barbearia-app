@@ -47,7 +47,7 @@ export default async function BarbeiroLayout({
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
         <div className="mb-6 flex items-center gap-2 text-stone-300">
           <CalendarCheck className="h-5 w-5 text-amber-500" />
-          <p className="text-sm text-stone-500">
+          <p className="text-sm text-stone-400">
             Confirme e conclua seus atendimentos — o cliente vê tudo em tempo real.
           </p>
         </div>

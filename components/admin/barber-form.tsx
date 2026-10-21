@@ -101,7 +101,7 @@ export default function BarberForm({
             className="input file:mr-3 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-950"
           />
           {barber?.photo_url && (
-            <p className="mt-2 flex items-center gap-2 text-xs text-stone-600">
+            <p className="mt-2 flex items-center gap-2 text-xs text-stone-400">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={barber.photo_url} alt="" className="h-10 w-10 rounded-full object-cover" />
               Foto atual — envie outra para substituir.
@@ -158,7 +158,7 @@ export default function BarberForm({
             </label>
           ))}
           {services.length === 0 && (
-            <p className="text-sm text-stone-500">
+            <p className="text-sm text-stone-400">
               Cadastre serviços primeiro na aba “Serviços”.
             </p>
           )}
@@ -187,7 +187,7 @@ export default function BarberForm({
                   />
                   {label}
                 </label>
-                <span className="hidden text-xs text-stone-600 sm:block">Janela 1</span>
+                <span className="hidden text-xs text-stone-400 sm:block">Janela 1</span>
                 <span className="grid grid-cols-2 gap-2 sm:col-span-1">
                   <input
                     type="time"

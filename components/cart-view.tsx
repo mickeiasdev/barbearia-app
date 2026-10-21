@@ -34,12 +34,12 @@ export default function CartView() {
           <h2 className="mt-4 font-serif text-2xl font-bold uppercase tracking-tight text-stone-100">
             Pedido confirmado!
           </h2>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-stone-400">
             Número do pedido:{' '}
             <span className="font-mono text-amber-400">{state.orderId.slice(0, 8)}</span>
           </p>
           {state.totalCents ? (
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-sm text-stone-400">
               Total: <span className="font-bold text-stone-200">{formatBRL(state.totalCents)}</span>
             </p>
           ) : null}
@@ -62,7 +62,7 @@ export default function CartView() {
             note="Após pagar, mostre o comprovante na retirada dos produtos."
           />
         ) : (
-          <p className="text-center text-xs text-stone-600">
+          <p className="text-center text-xs text-stone-400">
             O pagamento pode ser feito na retirada, direto na barbearia.
           </p>
         )}
@@ -82,9 +82,9 @@ export default function CartView() {
   if (items.length === 0) {
     return (
       <div className="card mx-auto max-w-md p-10 text-center">
-        <ShoppingBag className="mx-auto h-12 w-12 text-stone-600" />
+        <ShoppingBag className="mx-auto h-12 w-12 text-stone-400" />
         <h2 className="mt-4 text-lg font-semibold text-stone-200">Seu carrinho está vazio</h2>
-        <p className="mt-1 text-sm text-stone-500">Confira nossos produtos profissionais.</p>
+        <p className="mt-1 text-sm text-stone-400">Confira nossos produtos profissionais.</p>
         <Link href="/loja" className="btn btn-primary mt-6">
           Ir para a loja
         </Link>
@@ -106,8 +106,9 @@ export default function CartView() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold text-stone-100">{item.name}</p>
               <p className="text-sm text-amber-500">{formatBRL(item.price_cents)}</p>
+              <p className="text-xs text-stone-400">de {item.establishment_name}</p>
               {item.quantity >= item.stock && (
-                <p className="text-xs text-stone-600">máx. disponível: {item.stock}</p>
+                <p className="text-xs text-stone-400">máx. disponível: {item.stock}</p>
               )}
             </div>
 
@@ -142,7 +143,7 @@ export default function CartView() {
               type="button"
               aria-label="Remover item"
               onClick={() => remove(item.product_id)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-700 text-stone-500 hover:border-red-800 hover:text-red-400"
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-stone-700 text-stone-400 hover:border-red-800 hover:text-red-400"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -194,9 +195,12 @@ export default function CartView() {
           {isPending ? 'Finalizando...' : 'Finalizar pedido'}
         </button>
 
-        <p className="text-center text-xs text-stone-600">
-          O pagamento é realizado na retirada dos produtos na barbearia.
-        </p>
+        {items[0] && (
+          <p className="text-center text-xs text-stone-400">
+            Retirada e pagamento com <strong>{items[0].establishment_name}</strong> — no
+            local ou por Pix, se o profissional tiver chave configurada.
+          </p>
+        )}
       </form>
     </div>
   )

@@ -4,6 +4,7 @@ import { formatBRL } from '@/lib/utils'
 import ProductForm from '@/components/admin/product-form'
 import { deleteProductAction, toggleProductAction } from '@/actions/admin'
 import type { Product } from '@/lib/types'
+import ActionButton from '@/components/admin/action-button'
 
 export default async function AdminProdutosPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function AdminProdutosPage({
   return (
     <div>
       <h1 className="section-title">Produtos</h1>
-      <p className="mt-2 text-sm text-stone-500">
+      <p className="mt-2 text-sm text-stone-400">
         {products.length} produto(s) — vendidos na loja online e no PDV.
       </p>
 
@@ -71,7 +72,7 @@ export default async function AdminProdutosPage({
                 <td className="table-cell">
                   <p className="font-medium text-stone-100">{product.name}</p>
                   {product.description && (
-                    <p className="text-xs text-stone-600">{product.description}</p>
+                    <p className="text-xs text-stone-400">{product.description}</p>
                   )}
                 </td>
                 <td className="table-cell">{product.category ?? '—'}</td>
@@ -103,13 +104,13 @@ export default async function AdminProdutosPage({
                   <div className="flex flex-wrap gap-1.5">
                     <form action={toggleProductAction}>
                       <input type="hidden" name="id" value={product.id} />
-                      <button type="submit" className="btn btn-outline btn-sm">
+                      <ActionButton className="btn btn-outline btn-sm" pendingLabel="Salvando...">
                         {product.is_active ? 'Desativar' : 'Ativar'}
-                      </button>
+                      </ActionButton>
                     </form>
                     <form action={deleteProductAction}>
                       <input type="hidden" name="id" value={product.id} />
-                      <button type="submit" className="btn btn-danger btn-sm">Excluir</button>
+                      <ActionButton className="btn btn-danger btn-sm" pendingLabel="Excluindo..." confirmMessage="Excluir este produto? Pedidos antigos são mantidos.">Excluir</ActionButton>
                     </form>
                   </div>
                 </td>
@@ -117,7 +118,7 @@ export default async function AdminProdutosPage({
             ))}
             {products.length === 0 && (
               <tr>
-                <td colSpan={6} className="table-cell py-10 text-center text-stone-500">
+                <td colSpan={6} className="table-cell py-10 text-center text-stone-400">
                   Nenhum produto cadastrado.
                 </td>
               </tr>

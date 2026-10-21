@@ -6,11 +6,10 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname
 
-  // Rotas que exigem sessão (a checagem de papel admin é feita no layout)
-  if (
-    !user &&
-    (path.startsWith('/minha-conta') || path.startsWith('/admin') || path.startsWith('/barbeiro'))
-  ) {
+  // Rotas que exigem sessão (a checagem de papel admin é feita no layout).
+  // Atenção: /barbeiros é página PÚBLICA — o portal é só /barbeiro.
+  const isBarberPortal = path === '/barbeiro' || path.startsWith('/barbeiro/')
+  if (!user && (path.startsWith('/minha-conta') || path.startsWith('/admin') || isBarberPortal)) {
     const url = request.nextUrl.clone()
     url.pathname = '/entrar'
     url.search = ''

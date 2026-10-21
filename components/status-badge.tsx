@@ -6,6 +6,7 @@ export default function StatusBadge({ status }: { status: string }) {
     confirmed: 'border-sky-500/30 bg-sky-500/10 text-sky-400',
     completed: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
     cancelled: 'border-red-500/30 bg-red-500/10 text-red-400',
+    no_show: 'border-orange-500/30 bg-orange-500/10 text-orange-400',
     paid: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
   }
 

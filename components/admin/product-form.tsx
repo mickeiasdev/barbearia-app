@@ -77,7 +77,7 @@ export default function ProductForm({ product }: { product: Product | null }) {
             className="input file:mr-3 file:rounded-md file:border-0 file:bg-amber-500 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-stone-950"
           />
           {product?.image_url && (
-            <p className="mt-2 flex items-center gap-2 text-xs text-stone-600">
+            <p className="mt-2 flex items-center gap-2 text-xs text-stone-400">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.image_url} alt="" className="h-10 w-10 rounded object-cover" />
               Imagem atual — envie outra para substituir.

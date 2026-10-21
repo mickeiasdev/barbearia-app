@@ -4,6 +4,7 @@ import { formatBRL, formatDuration } from '@/lib/utils'
 import ServiceForm from '@/components/admin/service-form'
 import { deleteServiceAction, toggleServiceAction } from '@/actions/admin'
 import type { Service } from '@/lib/types'
+import ActionButton from '@/components/admin/action-button'
 
 export default async function AdminServicosPage({
   searchParams,
@@ -35,7 +36,7 @@ export default async function AdminServicosPage({
   return (
     <div>
       <h1 className="section-title">Serviços</h1>
-      <p className="mt-2 text-sm text-stone-500">
+      <p className="mt-2 text-sm text-stone-400">
         {services.length} serviço(s) cadastrado(s). Preço e duração alimentam o agendamento.
       </p>
 
@@ -70,7 +71,7 @@ export default async function AdminServicosPage({
                 <td className="table-cell">
                   <p className="font-medium text-stone-100">{service.name}</p>
                   {service.description && (
-                    <p className="text-xs text-stone-600">{service.description}</p>
+                    <p className="text-xs text-stone-400">{service.description}</p>
                   )}
                 </td>
                 <td className="table-cell">{formatDuration(service.duration_min)}</td>
@@ -88,13 +89,13 @@ export default async function AdminServicosPage({
                   <div className="flex flex-wrap gap-1.5">
                     <form action={toggleServiceAction}>
                       <input type="hidden" name="id" value={service.id} />
-                      <button type="submit" className="btn btn-outline btn-sm">
+                      <ActionButton className="btn btn-outline btn-sm" pendingLabel="Salvando...">
                         {service.is_active ? 'Desativar' : 'Ativar'}
-                      </button>
+                      </ActionButton>
                     </form>
                     <form action={deleteServiceAction}>
                       <input type="hidden" name="id" value={service.id} />
-                      <button type="submit" className="btn btn-danger btn-sm">Excluir</button>
+                      <ActionButton className="btn btn-danger btn-sm" pendingLabel="Excluindo..." confirmMessage="Excluir este serviço? Agendamentos antigos são mantidos, mas ele some do site.">Excluir</ActionButton>
                     </form>
                   </div>
                 </td>
@@ -102,7 +103,7 @@ export default async function AdminServicosPage({
             ))}
             {services.length === 0 && (
               <tr>
-                <td colSpan={5} className="table-cell py-10 text-center text-stone-500">
+                <td colSpan={5} className="table-cell py-10 text-center text-stone-400">
                   Nenhum serviço cadastrado.
                 </td>
               </tr>

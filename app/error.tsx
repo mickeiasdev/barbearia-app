@@ -22,7 +22,7 @@ export default function ErrorPage({
         {needsSetup ? 'Configuração necessária' : 'Algo deu errado'}
       </h2>
       {needsSetup ? (
-        <div className="max-w-md space-y-2 text-sm text-stone-500">
+        <div className="max-w-md space-y-2 text-sm text-stone-400">
           <p>As variáveis do Supabase ainda não foram configuradas.</p>
           <p className="text-stone-400">
             1. Copie <code className="rounded bg-stone-900 px-1.5 py-0.5 text-amber-400">.env.example</code> para{' '}
@@ -34,7 +34,7 @@ export default function ErrorPage({
           </p>
         </div>
       ) : (
-        <p className="max-w-md text-sm text-stone-500">
+        <p className="max-w-md text-sm text-stone-400">
           Ocorreu um erro inesperado. Tente novamente em instantes.
         </p>
       )}

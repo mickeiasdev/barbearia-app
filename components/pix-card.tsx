@@ -53,7 +53,7 @@ export default function PixCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={qrDataUrl} alt="QR Code Pix" width={220} height={220} />
           ) : (
-            <div className="flex h-[220px] items-center justify-center px-3 text-center text-xs text-stone-500">
+            <div className="flex h-[220px] items-center justify-center px-3 text-center text-xs text-stone-400">
               QR indisponível — use o código copia e cola ao lado.
             </div>
           )}
@@ -61,7 +61,7 @@ export default function PixCard({
 
         <div className="min-w-0 space-y-2">
           <p className="text-lg font-bold text-stone-100">{formatBRL(amountCents)}</p>
-          <p className="text-xs text-stone-500">
+          <p className="text-xs text-stone-400">
             Abra o app do seu banco, escolha Pix e escaneie o QR Code — ou use o
             código copia e cola abaixo.
           </p>
@@ -81,7 +81,7 @@ export default function PixCard({
               )}
             </button>
           </div>
-          {note && <p className="text-[11px] text-stone-600">{note}</p>}
+          {note && <p className="text-[11px] text-stone-400">{note}</p>}
         </div>
       </div>
     </details>

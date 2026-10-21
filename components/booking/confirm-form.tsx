@@ -69,7 +69,7 @@ export default function ConfirmForm(props: Props) {
             : 'Confirmar agendamento'}
       </button>
 
-      <p className="text-center text-xs text-stone-600">
+      <p className="text-center text-xs text-stone-400">
         {props.re
           ? 'O horário anterior será substituído por este.'
           : 'Você pode acompanhar tudo em Minha Conta.'}

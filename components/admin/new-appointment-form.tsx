@@ -137,11 +137,11 @@ export default function NewAppointmentForm({ clients, services, barbers }: Props
           <input type="hidden" name="hora" value={hora} />
           <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-stone-800 bg-stone-950 p-2">
             {!serviceId || !barberId ? (
-              <span className="p-1 text-xs text-stone-600">Escolha serviço e barbeiro</span>
+              <span className="p-1 text-xs text-stone-400">Escolha serviço e barbeiro</span>
             ) : loading ? (
-              <span className="p-1 text-xs text-stone-600">Carregando...</span>
+              <span className="p-1 text-xs text-stone-400">Carregando...</span>
             ) : (slots ?? []).length === 0 ? (
-              <span className="p-1 text-xs text-stone-600">Sem horários livres</span>
+              <span className="p-1 text-xs text-stone-400">Sem horários livres</span>
             ) : (
               (slots ?? []).map((slot) => {
                 const label = timeInSP(slot).slice(0, 5)

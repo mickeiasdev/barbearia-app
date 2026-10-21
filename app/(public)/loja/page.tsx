@@ -8,6 +8,8 @@ import type { Product } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Loja' }
 
+type ProductWithPlace = Product & { establishment?: { name: string } | null }
+
 export default async function LojaPage({
   searchParams,
 }: {
@@ -20,7 +22,7 @@ export default async function LojaPage({
   const supabase = await createClient()
   let query = supabase
     .from('products')
-    .select('*')
+    .select('*, establishment:establishments(name)')
     .eq('is_active', true)
     .order('name')
 
@@ -37,14 +39,14 @@ export default async function LojaPage({
     supabase.from('products').select('category').eq('is_active', true),
   ])
 
-  const products = (productsData ?? []) as Product[]
-  const categories = [...new Set((allProducts ?? []).map((p) => p.category).filter(Boolean))] as string[]
+  const products = (productsData ?? []) as unknown as ProductWithPlace[]
+  const categories = [...new Set((allProducts ?? []).map((p) => (p as { category: string | null }).category).filter(Boolean))] as string[]
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12">
       <h1 className="section-title">Loja</h1>
-      <p className="mt-2 text-sm text-stone-500">
-        Produtos profissionais usados pelos nossos barbeiros. Compre online e retire na barbearia.
+      <p className="mt-2 text-sm text-stone-400">
+        Produtos profissionais dos nossos barbeiros. Compre online e retire com o profissional.
       </p>
 
       {/* busca */}
@@ -93,26 +95,29 @@ export default async function LojaPage({
                 className="mb-4 h-36 w-full rounded-lg object-cover"
               />
             ) : (
-              <span className="mb-4 flex h-36 w-full items-center justify-center rounded-lg bg-stone-800/60 text-stone-600">
+              <span className="mb-4 flex h-36 w-full items-center justify-center rounded-lg bg-stone-800/60 text-stone-400">
                 <Package className="h-10 w-10" />
               </span>
             )}
 
             {product.category && (
-              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-600">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-stone-400">
                 {product.category}
               </p>
             )}
             <h2 className="mt-0.5 font-semibold text-stone-100">{product.name}</h2>
+            {product.establishment?.name && (
+              <p className="mt-0.5 text-xs text-stone-400">por {product.establishment.name}</p>
+            )}
             {product.description && (
-              <p className="mt-1 line-clamp-2 flex-1 text-xs text-stone-500">
+              <p className="mt-1 line-clamp-2 flex-1 text-xs text-stone-400">
                 {product.description}
               </p>
             )}
 
             <div className="mt-3 flex items-center justify-between">
               <span className="font-bold text-amber-500">{formatBRL(product.price_cents)}</span>
-              <span className={'text-xs ' + (product.stock <= 3 ? 'text-red-400' : 'text-stone-500')}>
+              <span className={'text-xs ' + (product.stock <= 3 ? 'text-red-400' : 'text-stone-400')}>
                 {product.stock <= 0 ? 'Esgotado' : product.stock + ' em estoque'}
               </span>
             </div>
@@ -124,6 +129,8 @@ export default async function LojaPage({
                   name: product.name,
                   price_cents: product.price_cents,
                   stock: product.stock,
+                  establishment_id: product.establishment_id,
+                  establishment_name: product.establishment?.name ?? 'profissional',
                 }}
               />
             </div>
@@ -132,7 +139,7 @@ export default async function LojaPage({
       </div>
 
       {products.length === 0 && (
-        <div className="card mt-8 p-10 text-center text-sm text-stone-500">
+        <div className="card mt-8 p-10 text-center text-sm text-stone-400">
           Nenhum produto encontrado nesta categoria.
         </div>
       )}

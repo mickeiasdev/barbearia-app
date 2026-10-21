@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { friendlyDbError, formatBRL, PAYMENT_LABEL } from '@/lib/utils'
 import { sendEmail, emailHtml } from '@/lib/email'
-import { getEstablishment } from '@/lib/data'
 import { buildPixPayload } from '@/lib/pix'
 import { qrFromPayload } from '@/lib/qr'
 
@@ -60,13 +59,16 @@ export async function placeOrderAction(
   revalidatePath('/minha-conta')
   revalidatePath('/loja')
 
-  // total real calculado no banco + e-mail de confirmação
+  // total real calculado no banco + espaço do pedido (para o Pix)
   const { data: order } = await supabase
     .from('orders')
-    .select('total_cents')
+    .select('total_cents, establishment:establishments(name, pix_key)')
     .eq('id', String(data))
     .maybeSingle()
-  const totalCents = (order as { total_cents: number } | null)?.total_cents ?? 0
+  const orderRow = order as
+    | { total_cents: number; establishment: { name: string; pix_key: string | null } | null }
+    | null
+  const totalCents = orderRow?.total_cents ?? 0
 
   await sendEmail(
     auth.user.email,
@@ -82,8 +84,8 @@ export async function placeOrderAction(
     )
   )
 
-  // Pix do pedido: payload + QR gerados no SERVIDOR (rápido e confiável)
-  const establishment = await getEstablishment()
+  // Pix do pedido no espaço do PROFISSIONAL (chave própria dele)
+  const establishment = orderRow?.establishment ?? null
   let pix: PlaceOrderState['pix'] = null
   if (establishment?.pix_key && totalCents > 0) {
     const payload = buildPixPayload({

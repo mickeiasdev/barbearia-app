@@ -1,4 +1,5 @@
-import { Search, Users } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronLeft, ChevronRight, Search, Users } from 'lucide-react'
 import { requireAdminPage } from '@/lib/data'
 import { formatBRL } from '@/lib/utils'
 import { dateKey, timeInSP } from '@/lib/tz'
@@ -8,27 +9,29 @@ import type { AppointmentDetails, Profile } from '@/lib/types'
 export default async function AdminClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; page?: string }>
 }) {
   const sp = await searchParams
   const raw = (sp.q ?? '').trim()
   // remove caracteres usados pela sintaxe do .or() do supabase
   const q = raw.replace(/[%_,()]/g, '')
+  const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
+  const perPage = 20
 
   const { supabase } = await requireAdminPage()
 
   let profilesQuery = supabase
     .from('profiles')
-    .select('*')
+    .select('*', { count: 'exact' })
     .in('role', ['client', 'barber'])
     .order('full_name')
-    .limit(50)
+    .range((page - 1) * perPage, page * perPage - 1)
 
   if (q) {
     profilesQuery = profilesQuery.or('full_name.ilike.%' + q + '%,email.ilike.%' + q + '%')
   }
 
-  const [{ data: profilesData }, { data: apptsData }, { data: ordersData }] = await Promise.all([
+  const [{ data: profilesData, count: profilesCount }, { data: apptsData }, { data: ordersData }] = await Promise.all([
     profilesQuery,
     supabase
       .from('appointments')
@@ -39,13 +42,13 @@ export default async function AdminClientesPage({
 
   const clients = (profilesData ?? []) as Profile[]
   const allAppts = (apptsData ?? []) as unknown as Array<
-    AppointmentDetails & { service?: { name: string } | null }
+    Omit<AppointmentDetails, 'status'> & { status: string; service?: { name: string } | null }
   >
   const orders = (ordersData ?? []) as { client_id: string | null; total_cents: number }[]
 
   // agregados por cliente
-  const stats = new Map<string, { visits: number; spent: number; lastVisit: string | null }>()
-  clients.forEach((c) => stats.set(c.id, { visits: 0, spent: 0, lastVisit: null }))
+  const stats = new Map<string, { visits: number; spent: number; lastVisit: string | null; noShows: number }>()
+  clients.forEach((c) => stats.set(c.id, { visits: 0, spent: 0, lastVisit: null, noShows: 0 }))
 
   allAppts.forEach((a) => {
     const s = stats.get(a.client_id)
@@ -55,6 +58,7 @@ export default async function AdminClientesPage({
       s.spent += a.price_cents
       if (!s.lastVisit || a.starts_at > s.lastVisit) s.lastVisit = a.starts_at
     }
+    if (a.status === 'no_show') s.noShows += 1
   })
   orders.forEach((o) => {
     const s = o.client_id ? stats.get(o.client_id) : undefined
@@ -66,10 +70,17 @@ export default async function AdminClientesPage({
     apptsByClient.set(a.client_id, [...(apptsByClient.get(a.client_id) ?? []), a])
   })
 
+  // paginação
+  const totalClients = profilesCount ?? 0
+  const totalPages = Math.max(1, Math.ceil(totalClients / perPage))
+  const hasPrev = page > 1
+  const hasNext = page < totalPages
+  const pageHref = (p: number) => '/admin/clientes?page=' + p + (raw ? '&q=' + encodeURIComponent(raw) : '')
+
   return (
     <div>
       <h1 className="section-title">Clientes</h1>
-      <p className="mt-2 text-sm text-stone-500">
+      <p className="mt-2 text-sm text-stone-400">
         Base de clientes com visitas, gasto total e último atendimento.
       </p>
 
@@ -91,13 +102,14 @@ export default async function AdminClientesPage({
       </form>
 
       {/* tabela */}
-      <div className="card mt-6 overflow-x-auto p-0">
+      <div className="card mt-6 overflow-x-auto p-0 hidden md:block">
         <table className="w-full min-w-[760px]">
           <thead>
             <tr className="border-b border-stone-800/80">
               <th className="table-head">Cliente</th>
               <th className="table-head">Contato</th>
               <th className="table-head">Visitas</th>
+              <th className="table-head">Faltas</th>
               <th className="table-head">Total gasto</th>
               <th className="table-head">Última visita</th>
             </tr>
@@ -120,13 +132,16 @@ export default async function AdminClientesPage({
                   </td>
                   <td className="table-cell">
                     <p className="text-xs text-stone-400">{c.email ?? '—'}</p>
-                    <p className="text-xs text-stone-600">{c.phone ?? ''}</p>
+                    <p className="text-xs text-stone-400">{c.phone ?? ''}</p>
                   </td>
                   <td className="table-cell font-semibold">{s.visits}</td>
+                  <td className={'table-cell font-semibold ' + (s.noShows >= 2 ? 'text-orange-400' : 'text-stone-400')}>
+                    {s.noShows}
+                  </td>
                   <td className="table-cell font-semibold text-amber-500">
                     {formatBRL(s.spent)}
                   </td>
-                  <td className="table-cell text-xs text-stone-500">
+                  <td className="table-cell text-xs text-stone-400">
                     {s.lastVisit
                       ? dateKey(s.lastVisit).split('-').reverse().join('/')
                       : '—'}
@@ -136,7 +151,7 @@ export default async function AdminClientesPage({
             })}
             {clients.length === 0 && (
               <tr>
-                <td colSpan={5} className="table-cell py-10 text-center text-stone-500">
+                <td colSpan={6} className="table-cell py-10 text-center text-stone-400">
                   Nenhum cliente encontrado{raw ? ' para esta busca' : ' ainda'}.
                 </td>
               </tr>
@@ -144,6 +159,77 @@ export default async function AdminClientesPage({
           </tbody>
         </table>
       </div>
+
+      {/* cards mobile */}
+      <div className="mt-6 space-y-3 md:hidden">
+        {clients.map((c) => {
+          const s = stats.get(c.id)!
+          return (
+            <div key={c.id} className="card flex flex-col gap-2 p-4">
+              <div>
+                <p className="text-sm font-semibold text-stone-100">
+                  {c.full_name}
+                  {c.role === 'barber' && (
+                    <span className="badge ml-2 border-amber-500/30 bg-amber-500/10 text-amber-400">
+                      barbeiro
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-stone-400">{c.email ?? '—'}</p>
+                <p className="text-xs text-stone-400">{c.phone ?? ''}</p>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-400">Visitas</span>
+                <span className="font-semibold text-stone-100">{s.visits}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-400">Total gasto</span>
+                <span className="font-semibold text-amber-500">{formatBRL(s.spent)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-400">Última visita</span>
+                <span className="text-stone-200">
+                  {s.lastVisit ? dateKey(s.lastVisit).split('-').reverse().join('/') : '—'}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-stone-400">Faltas</span>
+                <span className={'font-semibold ' + (s.noShows >= 2 ? 'text-orange-400' : 'text-stone-400')}>
+                  {s.noShows}
+                </span>
+              </div>
+            </div>
+          )
+        })}
+        {clients.length === 0 && (
+          <p className="card p-10 text-center text-sm text-stone-400">
+            Nenhum cliente encontrado{raw ? ' para esta busca' : ' ainda'}.
+          </p>
+        )}
+      </div>
+
+      {/* paginação */}
+      {(hasPrev || hasNext) && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          {hasPrev ? (
+            <Link href={pageHref(page - 1)} className="btn btn-outline btn-sm">
+              <ChevronLeft className="h-4 w-4" /> Anteriores
+            </Link>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs text-stone-400">
+            Página {page} de {totalPages} ({totalClients} cliente(s))
+          </span>
+          {hasNext ? (
+            <Link href={pageHref(page + 1)} className="btn btn-outline btn-sm">
+              Próxima <ChevronRight className="h-4 w-4" />
+            </Link>
+          ) : (
+            <span />
+          )}
+        </div>
+      )}
 
       {/* histórico por cliente */}
       <div className="mt-6 space-y-3">

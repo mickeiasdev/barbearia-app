@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useActionState } from 'react'
 import { Banknote, CheckCircle, CreditCard, Minus, Plus, QrCode, Trash2 } from 'lucide-react'
 import { adminPlaceOrderAction, type PosState } from '@/actions/admin'
-import { formatBRL } from '@/lib/utils'
+import { formatBRL, parsePriceToCents } from '@/lib/utils'
 
 interface PosProduct {
   id: string
@@ -30,6 +30,7 @@ export default function PosTerminal({
   clients: { id: string; full_name: string }[]
 }) {
   const [lines, setLines] = useState<PosLine[]>([])
+  const [discount, setDiscount] = useState('')
   const [state, formAction, isPending] = useActionState<PosState, FormData>(
     adminPlaceOrderAction,
     {}
@@ -47,6 +48,8 @@ export default function PosTerminal({
   }, [state.ok, state.orderId, state.totalCents])
 
   const total = lines.reduce((acc, l) => acc + l.price_cents * l.quantity, 0)
+  const discountCents = Math.min(parsePriceToCents(discount) ?? 0, total)
+  const grandTotal = total - discountCents
 
   const addProduct = (p: PosProduct) => {
     setLines((prev) => {
@@ -105,12 +108,12 @@ export default function PosTerminal({
                 }
               >
                 <p className="truncate text-sm font-medium text-stone-100">{p.name}</p>
-                <p className="text-xs text-stone-600">{p.category ?? '—'}</p>
+                <p className="text-xs text-stone-400">{p.category ?? '—'}</p>
                 <div className="mt-1 flex items-center justify-between">
                   <span className="text-sm font-bold text-amber-500">
                     {formatBRL(p.price_cents)}
                   </span>
-                  <span className="text-[11px] text-stone-600">
+                  <span className="text-[11px] text-stone-400">
                     estoque: {p.stock}
                   </span>
                 </div>
@@ -118,7 +121,7 @@ export default function PosTerminal({
             )
           })}
           {products.length === 0 && (
-            <p className="card col-span-full p-6 text-center text-sm text-stone-500">
+            <p className="card col-span-full p-6 text-center text-sm text-stone-400">
               Nenhum produto ativo. Cadastre em Produtos.
             </p>
           )}
@@ -140,7 +143,7 @@ export default function PosTerminal({
         )}
 
         {lines.length === 0 ? (
-          <p className="py-6 text-center text-sm text-stone-600">
+          <p className="py-6 text-center text-sm text-stone-400">
             Clique nos produtos para lançar a venda.
           </p>
         ) : (
@@ -173,7 +176,7 @@ export default function PosTerminal({
                   type="button"
                   aria-label="Remover"
                   onClick={() => setLines((prev) => prev.filter((x) => x.product_id !== l.product_id))}
-                  className="text-stone-600 hover:text-red-400"
+                  className="text-stone-400 hover:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -182,9 +185,27 @@ export default function PosTerminal({
           </ul>
         )}
 
-        <div className="flex justify-between border-t border-stone-800 pt-3 text-sm">
-          <span className="text-stone-400">Total</span>
-          <span className="text-lg font-bold text-amber-500">{formatBRL(total)}</span>
+        <div className="space-y-2 border-t border-stone-800 pt-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-stone-400">Subtotal</span>
+            <span className="font-medium text-stone-200">{formatBRL(total)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="pos-discount" className="text-stone-400">Desconto (R$)</label>
+            <input
+              id="pos-discount"
+              name="discount"
+              inputMode="decimal"
+              placeholder="0,00"
+              className="input w-28 py-1.5 text-right"
+              value={discount}
+              onChange={(e) => setDiscount(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-between">
+            <span className="text-stone-400">Total</span>
+            <span className="text-lg font-bold text-amber-500">{formatBRL(grandTotal)}</span>
+          </div>
         </div>
 
         <div>
@@ -216,7 +237,7 @@ export default function PosTerminal({
         </div>
 
         <input type="hidden" name="items" value={itemsJson} />
-        <input type="hidden" name="display_total" value={total} />
+        <input type="hidden" name="display_gross" value={total} />
 
         {state.error && <div className="error-box">{state.error}</div>}
 
