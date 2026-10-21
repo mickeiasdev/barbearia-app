@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import { MASTER_WS_COOKIE, isPlatformAdmin, getMyCompany } from '@/lib/data'
+import { RESERVED_SLUGS } from '@/lib/site'
 import { friendlyDbError } from '@/lib/utils'
 import type { Establishment } from '@/lib/types'
 
@@ -74,14 +75,14 @@ async function uniqueSlug(supabase: Awaited<ReturnType<typeof createClient>>, na
   if (slug.length < 2) slug = 'espaco'
   let base = slug
   let n = 1
-  // verifica disponibilidade até achar um slug livre
+  // verifica disponibilidade até achar um slug livre (reservados não valem)
   for (;;) {
     const { data } = await supabase
       .from('establishments')
       .select('id')
       .eq('slug', slug)
       .limit(1)
-    if (!data || data.length === 0) return slug
+    if ((!data || data.length === 0) && !RESERVED_SLUGS.includes(slug)) return slug
     n += 1
     slug = base + '-' + n
     if (n > 50) {

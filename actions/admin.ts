@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminAction } from '@/lib/data'
+import { RESERVED_SLUGS } from '@/lib/site'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { friendlyDbError, parsePriceToCents } from '@/lib/utils'
@@ -70,6 +71,9 @@ export async function saveEstablishmentAction(
   }
   if (slugInput !== null && (slugInput.length < 2 || slugInput.length > 60)) {
     return { error: 'O endereço do perfil deve ter entre 2 e 60 caracteres.' }
+  }
+  if (slugInput !== null && RESERVED_SLUGS.includes(slugInput)) {
+    return { error: 'Este endereço é reservado pelo sistema (rota existente). Escolha outro.' }
   }
 
   // ===== apresentação do site (layout, banner, nome e frase) =====

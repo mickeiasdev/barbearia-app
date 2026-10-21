@@ -119,6 +119,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0007_company_hierarchy.sql`](supabase/migrations/0007_company_hierarchy.sql) (**hierarquia em 3 níveis**: empresas (`is_company`) agrupam espaços de profissionais (`parent_id`); 1º barbeiro vira gerenciador da empresa) → **Run**;
 - E com [`supabase/migrations/0008_presentation.sql`](supabase/migrations/0008_presentation.sql) (**apresentação configurável**: 3 layouts de site por barbeiro + banner, nome de exibição e frase) → **Run**;
 - E com [`supabase/migrations/0009_saas_billing.sql`](supabase/migrations/0009_saas_billing.sql) (**SaaS**: auto-onboarding de barbearias com trial 14 dias, gerente cadastra barbeiros, planos Pro/Business) → **Run**;
+- E com [`supabase/migrations/0010_reserved_slugs.sql`](supabase/migrations/0010_reserved_slugs.sql) (**endereços por caminho**: slugs reservados para rotas, slug da HS Barearia vira `hsbarbearia`, backfill de gerente) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -172,7 +173,15 @@ Também configura **banner** (upload até 4MB), **nome de exibição** e **frase
 - **Site do profissional** (`{nome}.SEUDOMINIO`): serviços, portfólio, avaliações e agendamento dele — sem nunca mostrar concorrentes.
 - Ao cadastrar um barbeiro numa empresa, o **primeiro** vira **gerenciador dela**: no painel dele aparece **"Minha empresa"** (`/admin/empresa`), onde edita os dados como preferir e **adiciona gerenciadores por e-mail** (só aceita logins de barbeiros vinculados à empresa).
 
-### Sites por subdomínio (um endereço para cada profissional)
+### Endereços: caminhos na raiz (o jeito principal)
+Com `NEXT_PUBLIC_DEFAULT_COMPANY_SLUG=hsbarbearia` configurado:
+- **`SEUDOMINIO.com.br`** → o site da SUA barbearia (a casa): equipe, endereço e horários;
+- **`SEUDOMINIO.com.br/lucas`** → o site do Lucas (layout escolhido nas Configurações dele);
+- **`SEUDOMINIO.com.br/{qualquer-profissional}`** → pelo slug, sem subdomínio, sem DNS extra.
+
+Endereços que são rotas do sistema (`/agendar`, `/loja`, `/entrar`...) têm prioridade e **não podem ser usados como slug** (bloqueio no banco — migration 0010). No site da empresa, os cards dos profissionais apontam para os caminhos `/{slug}`.
+
+### Sites por subdomínio (alternativa, já pronta)
 Cada espaço ganha um **site próprio** no subdomínio igual ao slug dele — `lucas.seudominio.com.br` mostra **só o Lucas**: landing com foto, nota, serviços, portfólio e avaliações; o agendamento já entra travado nele; a loja exibe apenas os produtos dele. Nenhum concorrente aparece (nem no HTML invisível). O domínio principal continua sendo a plataforma com todos.
 
 Para ativar:

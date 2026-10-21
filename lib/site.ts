@@ -6,10 +6,28 @@ import type { Barber, Establishment } from '@/lib/types'
 
 // Domínio(s) raiz da plataforma — configure no .env.local / Vercel:
 //   NEXT_PUBLIC_ROOT_DOMAINS=hsbarbearia.com.br,localhost
-// - Raiz: plataforma (lista as empresas)
+// - Raiz: o site da EMPRESA PADRÃO (se configurada) ou a plataforma
 // - {empresa}.raiz: site da empresa (lista os profissionais dela)
 // - {profissional}.raiz: site próprio do profissional
+// - /{profissional}: caminho por barra no domínio principal
 const ROOT_DOMAINS_RAW = process.env.NEXT_PUBLIC_ROOT_DOMAINS ?? ''
+
+// Slug de empresa exibida na RAIZ do domínio principal (a "casa").
+// Ex.: NEXT_PUBLIC_DEFAULT_COMPANY_SLUG=hsbarbearia → hsbarbearia.com.br
+// é o site da própria barbearia, com profissionais em /lucas, /hiago...
+const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_SLUG ?? ''
+
+/**
+ * Endereços (slugs) reservados pelas rotas do sistema — não podem
+ * ser usados como endereço de empresa/profissional.
+ */
+export const RESERVED_SLUGS: string[] = [
+  'admin', 'barbeiro', 'api', 'auth', 'vender', 'p', 'agendar', 'loja',
+  'servicos', 'barbeiros', 'entrar', 'registrar', 'registrar-empresa',
+  'recuperar-senha', 'redefinir-senha', 'minha-conta', 'carrinho', 'assinar',
+  'favicon.ico', 'sitemap.xml', 'robots.txt', 'manifest.webmanifest',
+  'icon.svg', '_next',
+]
 
 /**
  * Extrai o subdomínio do host atual (slug de empresa ou de profissional).
@@ -59,19 +77,52 @@ export interface HostContext {
   workspace: HostWorkspace | null
 }
 
+/** O host atual é a raiz configurada (ou localhost)? */
+function isRootHost(h: string): boolean {
+  const roots = ROOT_DOMAINS_RAW
+    .split(',')
+    .map((r) => r.trim().toLowerCase())
+    .filter(Boolean)
+  if (roots.length === 0) return h === 'localhost' || h.endsWith('.localhost')
+  return roots.some(
+    (r) => h === r || h === 'www.' + r || h === 'localhost' || h.endsWith('.localhost')
+  )
+}
+
 /**
  * Contexto do host atual (cacheado por request).
- * Raiz → plataforma. {slug} → empresa (is_company) ou profissional.
+ * Raiz → empresa PADRÃO (se configurada) ou plataforma.
+ * {slug} → empresa (is_company) ou profissional.
  */
 export const getHostContext = cache(async (): Promise<HostContext> => {
   let sub: string | null = null
+  let hostName = ''
   try {
     const h = await headers()
+    hostName = (h.get('host') ?? h.get('x-forwarded-host') ?? '').trim().toLowerCase().replace(/:\d+$/, '')
     sub = parseSubdomain(h.get('host') ?? h.get('x-forwarded-host'))
   } catch {
     sub = null
   }
-  if (!sub) return { sub: null, company: null, workspace: null }
+  if (!sub) {
+    // RAIZ do domínio principal: mostra a EMPRESA PADRÃO configurada
+    // (ex.: hsbarbearia.com.br é o site da própria barbearia).
+    if (DEFAULT_COMPANY_SLUG && isRootHost(hostName)) {
+      try {
+        const supabase = await createClient()
+        const { data: est } = await supabase
+          .from('establishments')
+          .select('*')
+          .eq('slug', DEFAULT_COMPANY_SLUG)
+          .eq('is_company', true)
+          .maybeSingle()
+        if (est) return { sub: null, company: est as Establishment, workspace: null }
+      } catch {
+        // sem banco: segue como plataforma
+      }
+    }
+    return { sub: null, company: null, workspace: null }
+  }
   if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(sub)) {
     return { sub, company: null, workspace: null }
   }

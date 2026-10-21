@@ -3,7 +3,6 @@ import { Calendar, Clock, MapPin, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL, initials } from '@/lib/utils'
 import Stars from '@/components/stars'
-import { subdomainUrl } from '@/lib/site'
 import { waLink } from '@/lib/whatsapp'
 import type { Establishment } from '@/lib/types'
 
@@ -165,12 +164,9 @@ export default async function CompanySite({ company }: { company: Establishment 
                     <Calendar className="h-4 w-4" /> Agendar com {barber.full_name.split(' ')[0]}
                   </Link>
                   {child && (
-                    <a
-                      href={subdomainUrl(child.slug)}
-                      className="btn btn-outline btn-sm w-full"
-                    >
+                    <Link href={'/' + child.slug} className="btn btn-outline btn-sm w-full">
                       Site do {barber.full_name.split(' ')[0]}
-                    </a>
+                    </Link>
                   )}
                 </div>
               </div>

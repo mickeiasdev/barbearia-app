@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getMyCompany } from '@/lib/data'
+import { RESERVED_SLUGS } from '@/lib/site'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { friendlyDbError } from '@/lib/utils'
@@ -54,6 +55,9 @@ export async function saveCompanyAction(
   const slugInput = String(formData.get('slug') ?? '').trim().toLowerCase() || null
   if (slugInput !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
     return { error: 'O endereço do site deve ter só letras minúsculas, números e hífens (ex.: hs-barearia).' }
+  }
+  if (slugInput !== null && RESERVED_SLUGS.includes(slugInput)) {
+    return { error: 'Este endereço é reservado pelo sistema (rota existente). Escolha outro.' }
   }
 
   if (!name) return { error: 'Informe o nome da empresa.' }
