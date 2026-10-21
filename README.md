@@ -148,6 +148,17 @@ Painel → **Authentication** → **Sign In / Providers** → **Email**: desligu
 
 Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
 
+### Sites por subdomínio (um endereço para cada profissional)
+Cada espaço ganha um **site próprio** no subdomínio igual ao slug dele — `lucas.seudominio.com.br` mostra **só o Lucas**: landing com foto, nota, serviços, portfólio e avaliações; o agendamento já entra travado nele; a loja exibe apenas os produtos dele. Nenhum concorrente aparece (nem no HTML invisível). O domínio principal continua sendo a plataforma com todos.
+
+Para ativar:
+1. Configure `NEXT_PUBLIC_ROOT_DOMAINS=seudominio.com.br,localhost` no `.env.local` **e** nas variáveis da Vercel (o `localhost` permite testar com `http://lucas.localhost:3000`);
+2. Na Vercel: **Settings → Domains → Add** para cada subdomínio (ex.: `lucas.seudominio.com.br`);
+3. No DNS do seu provedor: registro **CNAME** de `lucas` para `cname.vercel-dns.com`;
+4. O link de divulgação aparece no **Painel Master → Espaços**.
+
+O slug do espaço é o endereço: ajuste em *Configurações → Endereço do perfil público* (só letras minúsculas, números e hífens). Subdomínio desconhecido mostra uma página "site não encontrado" — sem vazar a plataforma.
+
 #### Opcionais pós-migração 0005
 - **Lembretes 24h**: configure `SUPABASE_SERVICE_ROLE_KEY` (Settings → API) e `CRON_SECRET` no `.env.local` — o cron diário (09:00 de Brasília) já vem agendado no `vercel.json` e chama `/api/cron/lembretes`.
 - **WhatsApp automático** (confirmações, lembretes, aviso de novo agendamento): configure `WHATSAPP_API_URL` e `WHATSAPP_API_TOKEN` com um gateway compatível (ex.: Z-API). Sem gateway, os avisos caem só no e-mail e os links wa.me continuam funcionando.

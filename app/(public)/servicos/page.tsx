@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Clock, MapPin } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL, formatDuration } from '@/lib/utils'
+import { requireKnownHost } from '@/lib/site'
 import type { Service } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Serviços' }
@@ -11,11 +12,18 @@ type ServiceWithPlace = Service & { establishment?: { name: string } | null }
 
 export default async function ServicosPage() {
   const supabase = await createClient()
-  const { data } = await supabase
+
+  // subdomínio: mostra apenas os serviços do profissional do site
+  const host = await requireKnownHost()
+  let query = supabase
     .from('services')
     .select('*, establishment:establishments(name)')
     .eq('is_active', true)
     .order('price_cents')
+  if (host.workspace) {
+    query = query.eq('establishment_id', host.workspace.establishment.id)
+  }
+  const { data } = await query
   const services = (data ?? []) as unknown as ServiceWithPlace[]
 
   return (

@@ -32,6 +32,19 @@ export default async function MasterPage({
     establishment?: { name: string; slug: string | null } | null
   })[]
 
+  // link de divulgação: subdomínio de cada profissional ({slug}.{domínio raiz})
+  const rootDomain =
+    (process.env.NEXT_PUBLIC_ROOT_DOMAINS ?? '')
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean)[0] ?? null
+  const promoUrl = (slug: string | null) =>
+    slug && rootDomain && rootDomain !== 'localhost'
+      ? 'https://' + slug + '.' + rootDomain
+      : slug
+        ? 'http://' + slug + '.localhost:3000'
+        : null
+
   return (
     <div className="max-w-5xl">
       <div className="flex items-start justify-between gap-4">
@@ -131,6 +144,19 @@ export default async function MasterPage({
                 <p className="truncate text-xs text-stone-400">
                   {s.address ?? 'Sem endereço'} · perfil: /p/{s.slug ?? '—'}
                 </p>
+                {promoUrl(s.slug) && (
+                  <p className="mt-1 truncate text-xs">
+                    <span className="text-stone-400">site próprio p/ divulgar: </span>
+                    <a
+                      href={promoUrl(s.slug) ?? '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-amber-400 underline-offset-2 hover:underline"
+                    >
+                      {promoUrl(s.slug)?.replace(/^https?:\/\//, '')}
+                    </a>
+                  </p>
+                )}
               </div>
               <form action={masterSetWorkspaceAction} className="shrink-0">
                 <input type="hidden" name="id" value={s.id} />

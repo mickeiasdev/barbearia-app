@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL } from '@/lib/utils'
 import AddToCartButton from '@/components/add-to-cart-button'
+import { requireKnownHost } from '@/lib/site'
 import type { Product } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Loja' }
@@ -20,11 +21,20 @@ export default async function LojaPage({
   const q = (sp.q ?? '').trim().replace(/[%_]/g, '')
 
   const supabase = await createClient()
+
+  // subdomínio: a loja mostra apenas os produtos do profissional do site
+  const host = await requireKnownHost()
+  const hostEstId = host.workspace?.establishment.id ?? null
+
   let query = supabase
     .from('products')
     .select('*, establishment:establishments(name)')
     .eq('is_active', true)
     .order('name')
+
+  if (hostEstId) {
+    query = query.eq('establishment_id', hostEstId)
+  }
 
   if (activeCat) {
     query = query.eq('category', activeCat)
@@ -34,9 +44,12 @@ export default async function LojaPage({
     query = query.ilike('name', '%' + q + '%')
   }
 
+  let allQuery = supabase.from('products').select('category').eq('is_active', true)
+  if (hostEstId) allQuery = allQuery.eq('establishment_id', hostEstId)
+
   const [{ data: productsData }, { data: allProducts }] = await Promise.all([
     query,
-    supabase.from('products').select('category').eq('is_active', true),
+    allQuery,
   ])
 
   const products = (productsData ?? []) as unknown as ProductWithPlace[]

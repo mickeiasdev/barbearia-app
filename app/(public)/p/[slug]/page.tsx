@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Calendar, Clock, MapPin, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -9,6 +9,7 @@ import Stars from '@/components/stars'
 import FavoriteButton from '@/components/favorite-button'
 import { getCurrentUser } from '@/lib/data'
 import { waLink } from '@/lib/whatsapp'
+import { requireKnownHost } from '@/lib/site'
 import type { Barber, Establishment } from '@/lib/types'
 
 interface Props {
@@ -29,6 +30,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProfessionalPage({ params }: Props) {
   const { slug } = await params
+
+  // no site de um profissional (subdomínio), o perfil é a própria home
+  const host = await requireKnownHost()
+  if (host.workspace) redirect('/')
 
   const supabase = await createClient()
 

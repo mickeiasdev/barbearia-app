@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { formatBRL, formatDuration, initials } from '@/lib/utils'
 import Stars from '@/components/stars'
 import FavoriteButton from '@/components/favorite-button'
+import BarberLanding from '@/components/barber-landing'
+import { requireKnownHost } from '@/lib/site'
 import { getCurrentUser } from '@/lib/data'
 import type { Barber, Product, Service } from '@/lib/types'
 
@@ -59,6 +61,12 @@ export default async function HomePage({
 }) {
   const sp = await searchParams
   const esp = sp.esp?.trim() || null
+
+  // subdomínio de um profissional: mostra o site DELE (sem concorrentes)
+  const host = await requireKnownHost()
+  if (host.workspace) {
+    return <BarberLanding workspace={host.workspace} />
+  }
 
   const { services, barbers, products, links, reviews, specialties } = await fetchData()
   const user = await getCurrentUser()

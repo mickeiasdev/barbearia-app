@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { formatBRL, formatDuration, initials } from '@/lib/utils'
 import { nextDays, shortDateLabel, timeInSP } from '@/lib/tz'
 import ConfirmForm from '@/components/booking/confirm-form'
+import { requireKnownHost } from '@/lib/site'
 import type { Barber, Service } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Agendar' }
@@ -72,9 +73,24 @@ export default async function AgendarPage({
 }) {
   const sp = await searchParams
   const servicoId = typeof sp.servico === 'string' ? sp.servico : null
-  const barbeiroId = typeof sp.barbeiro === 'string' ? sp.barbeiro : null
+  let barbeiroId = typeof sp.barbeiro === 'string' ? sp.barbeiro : null
   const re = typeof sp.re === 'string' && sp.re.length > 10 ? sp.re : null
   const dataKey = typeof sp.data === 'string' && DATE_RE.test(sp.data) ? sp.data : null
+
+  // SUBDOMÍNIO DE UM PROFISSIONAL: o wizard fica travado no barbeiro
+  // daquele site (o visitante não vê concorrentes).
+  const host = await requireKnownHost()
+  if (host.workspace) {
+    const hostIds = new Set(host.workspace.barbers.map((b) => b.id))
+    const fallback = host.workspace.barbers[0]?.id ?? null
+    if (!hostIds.has(barbeiroId ?? '') && !re) {
+      barbeiroId = fallback
+    }
+    if (!barbeiroId && host.workspace.barbers.length > 0 && !re) {
+      barbeiroId = host.workspace.barbers[0].id
+    }
+  }
+
   const hora =
     typeof sp.hora === 'string' && TIME_RE.test(sp.hora) && dataKey && barbeiroId && servicoId
       ? sp.hora

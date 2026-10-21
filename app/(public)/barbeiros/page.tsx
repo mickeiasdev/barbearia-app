@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { Calendar, Clock, MapPin, MessageCircle, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
@@ -8,11 +9,16 @@ import Stars from '@/components/stars'
 import FavoriteButton from '@/components/favorite-button'
 import { getCurrentUser } from '@/lib/data'
 import { waLink } from '@/lib/whatsapp'
+import { requireKnownHost } from '@/lib/site'
 import type { Barber, BarberSchedule, Service } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Profissionais' }
 
 export default async function BarbeirosPage() {
+  // no site de um profissional, a listagem de equipe redireciona para a home dele
+  const host = await requireKnownHost()
+  if (host.workspace) redirect('/')
+
   const supabase = await createClient()
   const user = await getCurrentUser()
 
