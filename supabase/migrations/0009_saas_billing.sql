@@ -97,13 +97,15 @@ grant execute on function public.create_tenant(text, text, text, time, time) to 
 -- ============================================================
 
 -- criar espaço-filho de uma empresa que administro
+-- (obs.: em policies RLS a linha nova é referenciada pelas colunas
+--  direto, sem o prefixo "new." — ele só existe em triggers)
 drop policy if exists establishments_tenant_child_insert on public.establishments;
 create policy establishments_tenant_child_insert on public.establishments
   for insert with check (
     public.is_superadmin()
     or exists (
       select 1 from public.establishments c
-      where c.id = new.parent_id
+      where c.id = parent_id
         and c.is_company
         and public.is_workspace_admin(c.id)
     )
