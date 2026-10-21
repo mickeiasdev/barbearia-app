@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { Clock, MapPin } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { formatBRL, formatDuration } from '@/lib/utils'
 import { requireKnownHost } from '@/lib/site'
 import type { Service } from '@/lib/types'
@@ -13,8 +14,10 @@ type ServiceWithPlace = Service & { establishment?: { name: string } | null }
 export default async function ServicosPage() {
   const supabase = await createClient()
 
-  // subdomínio: mostra apenas os serviços do profissional do site
+  // subdomínio: mostra apenas os serviços do profissional do site;
+  // no site de uma EMPRESA, os serviços ficam nos sites dos profissionais
   const host = await requireKnownHost()
+  if (host.company) redirect('/')
   let query = supabase
     .from('services')
     .select('*, establishment:establishments(name)')

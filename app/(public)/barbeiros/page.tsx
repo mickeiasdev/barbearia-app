@@ -15,9 +15,9 @@ import type { Barber, BarberSchedule, Service } from '@/lib/types'
 export const metadata: Metadata = { title: 'Profissionais' }
 
 export default async function BarbeirosPage() {
-  // no site de um profissional, a listagem de equipe redireciona para a home dele
+  // no site de um profissional ou de uma empresa, a listagem redireciona
   const host = await requireKnownHost()
-  if (host.workspace) redirect('/')
+  if (host.workspace || host.company) redirect('/')
 
   const supabase = await createClient()
   const user = await getCurrentUser()

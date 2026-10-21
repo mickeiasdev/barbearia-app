@@ -88,36 +88,47 @@ export async function masterCreateBarberAction(
     return { error: 'A comissão deve estar entre 0 e 100%.' }
   }
 
-  // ===== local de trabalho =====
-  const baseEstId = String(formData.get('base_establishment_id') ?? '').trim()
-  let unitName = ''
-  let unitAddress: string | null = null
-  let unitWhatsapp: string | null = null
-  let unitPhone: string | null = null
-  let unitPix: string | null = null
+  // ===== EMPRESA onde o barbeiro vai trabalhar =====
+  const companyId = String(formData.get('company_id') ?? '').trim()
+  let company: Establishment | null = null
 
-  if (baseEstId) {
-    // copia o local de um espaço existente
-    const { data: baseEst } = await supabase
+  if (companyId) {
+    const { data: companyData } = await supabase
       .from('establishments')
       .select('*')
-      .eq('id', baseEstId)
+      .eq('id', companyId)
       .maybeSingle()
-    const est = baseEst as Establishment | null
-    if (!est) return { error: 'Espaço base não encontrado.' }
-    unitName = (est.name.split(' — ')[0] ?? est.name).trim()
-    unitAddress = est.address
-    unitWhatsapp = est.whatsapp
-    unitPhone = est.phone
-    unitPix = null // Pix é individual de cada barbeiro
+    company = companyData as Establishment | null
+    if (!company || !company.is_company) {
+      return { error: 'Empresa não encontrada.' }
+    }
   } else {
-    unitName = String(formData.get('unit_name') ?? '').trim()
-    unitAddress = String(formData.get('unit_address') ?? '').trim() || null
-    unitWhatsapp = String(formData.get('unit_whatsapp') ?? '').trim() || null
-    if (!unitName) return { error: 'Informe o nome do local (ex.: HS Barearia) ou escolha um espaço existente.' }
+    // nova empresa informada junto com o barbeiro
+    const companyName = String(formData.get('company_name') ?? '').trim()
+    const companyAddress = String(formData.get('company_address') ?? '').trim() || null
+    const companyWhatsapp = String(formData.get('company_whatsapp') ?? '').trim() || null
+    if (!companyName) {
+      return { error: 'Informe a empresa onde ele vai trabalhar (escolha uma ou cadastre uma nova).' }
+    }
+    const companySlug = await uniqueSlug(supabase, companyName, Date.now().toString())
+    const { data: newCompany, error: companyError } = await supabase
+      .from('establishments')
+      .insert({
+        name: companyName,
+        address: companyAddress,
+        phone: companyWhatsapp,
+        whatsapp: companyWhatsapp,
+        is_company: true,
+        owner_id: master.userId,
+        slug: companySlug,
+      })
+      .select('*')
+      .single()
+    if (companyError) return { error: friendlyDbError(companyError.message) }
+    company = newCompany as Establishment
   }
 
-  const workspaceName = unitName + ' — ' + name
+  const workspaceName = company.name + ' — ' + name
 
   // ===== LOGIN: cria a conta (ou usa uma já existente) =====
   const adminClient = createAdminClient()
@@ -168,19 +179,20 @@ export async function masterCreateBarberAction(
 
   if (!userId) return { error: 'Não foi possível criar o login. Tente novamente.' }
 
-  // ===== ESPAÇO DE TRABALHO DO BARBEIRO =====
-  const slug = await uniqueSlug(supabase, workspaceName, userId)
+  // ===== ESPAÇO DE TRABALHO DO BARBEIRO (vinculado à empresa) =====
+  // slug curto = endereço próprio do profissional (lucas, joao...)
+  const slug = await uniqueSlug(supabase, name, userId)
   const { data: estData, error: estError } = await supabase
     .from('establishments')
     .insert({
       name: workspaceName,
-      address: unitAddress,
-      phone: unitPhone,
-      whatsapp: unitWhatsapp,
-      pix_key: unitPix,
-      opening_time: '09:00',
-      closing_time: '19:00',
-      slot_step_min: 15,
+      parent_id: company.id,
+      address: company.address,
+      phone: company.phone,
+      whatsapp: company.whatsapp,
+      opening_time: company.opening_time,
+      closing_time: company.closing_time,
+      slot_step_min: company.slot_step_min,
       owner_id: userId,
       slug,
     })
@@ -215,6 +227,21 @@ export async function masterCreateBarberAction(
     .update({ role: 'admin' })
     .eq('id', userId)
     .eq('role', 'barber')
+
+  // PRIMEIRO barbeiro da empresa vira GERENCIADOR dela
+  // (acesso a /admin/empresa para editar dados e adicionar gerenciadores)
+  const { count: teamCount } = await supabase
+    .from('establishments')
+    .select('id', { count: 'exact', head: true })
+    .eq('parent_id', company.id)
+  if ((teamCount ?? 0) <= 1) {
+    await supabase
+      .from('establishment_admins')
+      .upsert(
+        { establishment_id: company.id, profile_id: userId },
+        { onConflict: 'establishment_id,profile_id', ignoreDuplicates: true }
+      )
+  }
 
   revalidatePath('/admin/master')
   revalidatePath('/', 'layout')
@@ -316,4 +343,43 @@ export async function masterSetWorkspaceAction(formData: FormData) {
 
   revalidatePath('/', 'layout')
   redirect('/admin')
+}
+
+// ============================================================
+// EMPRESAS (cadastradas pelo master; agrupam profissionais)
+// ============================================================
+export async function masterCreateCompanyAction(
+  _prev: MasterState,
+  formData: FormData
+): Promise<MasterState> {
+  const master = await requireMaster()
+  if (!master) return { error: 'Sem permissão — apenas o administrador master cadastra empresas.' }
+  const { supabase } = master
+
+  const name = String(formData.get('name') ?? '').trim()
+  const address = String(formData.get('address') ?? '').trim() || null
+  const whatsapp = String(formData.get('whatsapp') ?? '').trim() || null
+  const opening = String(formData.get('opening_time') ?? '09:00') || '09:00'
+  const closing = String(formData.get('closing_time') ?? '19:00') || '19:00'
+
+  if (!name) return { error: 'Informe o nome da empresa (ex.: HS Barearia — Unidade Centro).' }
+  if (opening >= closing) return { error: 'O horário de abertura deve ser antes do fechamento.' }
+
+  const slug = await uniqueSlug(supabase, name, Date.now().toString())
+  const { error } = await supabase.from('establishments').insert({
+    name,
+    address,
+    phone: whatsapp,
+    whatsapp,
+    opening_time: opening,
+    closing_time: closing,
+    is_company: true,
+    owner_id: master.userId,
+    slug,
+  })
+  if (error) return { error: friendlyDbError(error.message) }
+
+  revalidatePath('/admin/master')
+  revalidatePath('/')
+  return { ok: true, notice: 'Empresa cadastrada! Agora cadastre os barbeiros que trabalham nela.' }
 }

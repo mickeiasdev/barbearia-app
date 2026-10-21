@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart3,
+  Building2,
   Calendar,
   LayoutDashboard,
   LogOut,
@@ -32,6 +33,7 @@ const LINKS = [
 ]
 
 const MASTER_LINK = { href: '/admin/master', label: 'Painel Master', icon: ShieldCheck }
+const COMPANY_LINK = { href: '/admin/empresa', label: 'Minha empresa', icon: Building2 }
 
 function useActive(href: string, exact?: boolean) {
   const pathname = usePathname()
@@ -60,10 +62,12 @@ export default function AdminSidebar({
   adminName,
   establishmentName,
   isMaster = false,
+  isCompanyManager = false,
 }: {
   adminName: string
   establishmentName: string | null
   isMaster?: boolean
+  isCompanyManager?: boolean
 }) {
   return (
     <>
@@ -83,6 +87,7 @@ export default function AdminSidebar({
 
         <nav className="flex flex-1 flex-col gap-1">
           {isMaster && <NavLink {...MASTER_LINK} />}
+          {isCompanyManager && <NavLink {...COMPANY_LINK} />}
           {LINKS.map((l) => (
             <NavLink key={l.href} {...l} />
           ))}
@@ -128,6 +133,11 @@ export default function AdminSidebar({
           {isMaster && (
             <div className="shrink-0">
               <NavLink {...MASTER_LINK} />
+            </div>
+          )}
+          {isCompanyManager && (
+            <div className="shrink-0">
+              <NavLink {...COMPANY_LINK} />
             </div>
           )}
           {LINKS.map((l) => (

@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react'
 import { requireAdminPage } from '@/lib/data'
 import ActionButton from '@/components/admin/action-button'
 import MasterBarberForm from '@/components/admin/master-barber-form'
+import MasterCompanyForm from '@/components/admin/master-company-form'
 import { masterToggleBarberAction, masterSetWorkspaceAction } from '@/actions/master'
 import type { Barber, Establishment } from '@/lib/types'
 
@@ -29,8 +30,14 @@ export default async function MasterPage({
   const spaces = (estsData ?? []) as unknown as Establishment[]
   const barbers = (barbersData ?? []) as unknown as (Barber & {
     profile?: { email: string | null } | null
-    establishment?: { name: string; slug: string | null } | null
+    establishment?: { name: string; slug: string | null; parent_id: string | null } | null
   })[]
+
+  // empresas cadastradas (agrupam profissionais)
+  const companies = spaces.filter((s) => s.is_company)
+  const companyById = new Map(companies.map((c) => [c.id, c]))
+  const teamSize = (companyId: string) =>
+    barbers.filter((b) => b.establishment?.parent_id === companyId).length
 
   // link de divulgação: subdomínio de cada profissional ({slug}.{domínio raiz})
   const rootDomain =
@@ -62,6 +69,41 @@ export default async function MasterPage({
       {sp.ok && <div className="ok-box mt-6" role="status">{sp.ok}</div>}
       {sp.erro && <div className="error-box mt-6" role="alert">{sp.erro}</div>}
 
+      {/* ===== empresas ===== */}
+      <div className="card mt-8 p-6">
+        <h2 className="mb-1 font-semibold text-stone-100">Empresas</h2>
+        <p className="mb-5 text-xs text-stone-400">
+          As empresas aparecem no site principal; o site de cada empresa lista os
+          profissionais dela. Cadastre a empresa antes (ou junto) dos barbeiros.
+        </p>
+        {companies.length > 0 && (
+          <ul className="mb-6 divide-y divide-stone-800/70 rounded-lg border border-stone-800">
+            {companies.map((c) => (
+              <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-stone-200">{c.name}</p>
+                  <p className="truncate text-xs text-stone-400">
+                    {c.address ?? 'Sem endereço'} · site: /{c.slug} ·{' '}
+                    {teamSize(c.id) === 1 ? '1 profissional' : teamSize(c.id) + ' profissionais'}
+                  </p>
+                </div>
+                {promoUrl(c.slug) && (
+                  <a
+                    href={promoUrl(c.slug) ?? '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-outline btn-sm shrink-0"
+                  >
+                    Ver site da empresa
+                  </a>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        <MasterCompanyForm />
+      </div>
+
       {/* ===== cadastrar barbeiro ===== */}
       <div className="card mt-8 p-6">
         <h2 className="mb-1 font-semibold text-stone-100">Cadastrar barbeiro</h2>
@@ -69,7 +111,7 @@ export default async function MasterPage({
           Cria o login, o espaço de trabalho dele e o registro no site — tudo em um
           passo. Ninguém além de você pode criar profissionais.
         </p>
-        <MasterBarberForm spaces={spaces.map((s) => ({ id: s.id, name: s.name }))} />
+        <MasterBarberForm companies={companies.map((c) => ({ id: c.id, name: c.name }))} />
       </div>
 
       {/* ===== barbeiros ===== */}
@@ -99,6 +141,11 @@ export default async function MasterPage({
                     {b.establishment?.name ?? '—'} · login: {b.profile?.email ?? '—'} ·
                     comissão {Number(b.commission_pct)}%
                   </p>
+                  {b.establishment?.parent_id && companyById.has(b.establishment.parent_id) && (
+                    <p className="truncate text-[11px] text-stone-400">
+                      Empresa: {companyById.get(b.establishment.parent_id)!.name}
+                    </p>
+                  )}
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <form action={masterSetWorkspaceAction}>

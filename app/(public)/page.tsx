@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { Calendar, Clock, MapPin, Scissors, Sparkles, Star, Store } from 'lucide-react'
+import { ArrowRight, Calendar, Clock, MapPin, Scissors, Sparkles, Star, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL, formatDuration, initials } from '@/lib/utils'
 import Stars from '@/components/stars'
 import FavoriteButton from '@/components/favorite-button'
 import BarberLanding from '@/components/barber-landing'
-import { requireKnownHost } from '@/lib/site'
+import CompanySite from '@/components/company-site'
+import { requireKnownHost, subdomainUrl } from '@/lib/site'
 import { getCurrentUser } from '@/lib/data'
 import type { Barber, Product, Service } from '@/lib/types'
 
@@ -20,7 +21,7 @@ async function fetchData() {
       .limit(6),
     supabase
       .from('barbers')
-      .select('*, establishment:establishments(name, address, slug)')
+      .select('*, establishment:establishments(name, address, slug, parent_id)')
       .eq('is_active', true)
       .order('full_name')
       .limit(12),
@@ -35,6 +36,13 @@ async function fetchData() {
     supabase.from('reviews').select('barber_id, rating').eq('is_visible', true),
   ])
 
+  // empresas cadastradas na plataforma (diretório do site principal)
+  const { data: companiesData } = await supabase
+    .from('establishments')
+    .select('id, name, slug, address')
+    .eq('is_company', true)
+    .order('name')
+
   // especialidades (nomes de serviços) para o filtro
   const { data: allServices } = await supabase
     .from('services')
@@ -45,12 +53,13 @@ async function fetchData() {
   return {
     services: (services.data ?? []) as unknown as (Service & { establishment?: { name: string } | null })[],
     barbers: (barbers.data ?? []) as unknown as (Barber & {
-      establishment?: { name: string; address: string | null; slug: string | null } | null
+      establishment?: { name: string; address: string | null; slug: string | null; parent_id: string | null } | null
     })[],
     products: (products.data ?? []) as unknown as (Product & { establishment?: { name: string } | null })[],
     links: (links.data ?? []) as { barber_id: string; service_id: string }[],
     reviews: (reviews.data ?? []) as { barber_id: string; rating: number }[],
     specialties: (allServices ?? []) as { id: string; name: string }[],
+    companies: (companiesData ?? []) as { id: string; name: string; slug: string; address: string | null }[],
   }
 }
 
@@ -68,7 +77,12 @@ export default async function HomePage({
     return <BarberLanding workspace={host.workspace} />
   }
 
-  const { services, barbers, products, links, reviews, specialties } = await fetchData()
+  // subdomínio de uma EMPRESA: mostra a equipe dela
+  if (host.company) {
+    return <CompanySite company={host.company} />
+  }
+
+  const { services, barbers, products, links, reviews, specialties, companies } = await fetchData()
   const user = await getCurrentUser()
 
   // filtro por especialidade (?esp=ID do serviço)
@@ -164,16 +178,83 @@ export default async function HomePage({
         <div className="mx-auto max-w-6xl px-4 py-16">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="section-title">Nossos profissionais</h2>
+              <h2 className="section-title">
+                {companies.length > 0 ? 'Empresas' : 'Nossos profissionais'}
+              </h2>
               <p className="mt-2 text-sm text-stone-400">
-                {espName ? 'Especialistas em ' + espName + '.' : 'Escolha com quem você quer atender.'}
+                {companies.length > 0
+                  ? 'Escolha a barbearia e conheça os profissionais que trabalham nela.'
+                  : espName
+                    ? 'Especialistas em ' + espName + '.'
+                    : 'Escolha com quem você quer atender.'}
               </p>
             </div>
-            <Link href="/barbeiros" className="btn btn-outline btn-sm shrink-0">
-              Ver todos
-            </Link>
+            {companies.length === 0 && (
+              <Link href="/barbeiros" className="btn btn-outline btn-sm shrink-0">
+                Ver todos
+              </Link>
+            )}
           </div>
 
+          {/* DIRETÓRIO DE EMPRESAS (quando cadastradas) */}
+          {companies.length > 0 && (
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {companies.map((company) => {
+                const team = barbers.filter((b) => b.establishment?.parent_id === company.id)
+                return (
+                  <a
+                    key={company.id}
+                    href={subdomainUrl(company.slug)}
+                    className="card group flex flex-col p-6 transition-colors hover:border-amber-500/40"
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+                      <Store className="h-6 w-6" />
+                    </span>
+                    <h3 className="mt-4 font-semibold text-stone-100 group-hover:text-amber-400">
+                      {company.name}
+                    </h3>
+                    {company.address && (
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-stone-400">
+                        <MapPin className="h-3 w-3 text-amber-500/80" /> {company.address}
+                      </p>
+                    )}
+                    <p className="mt-2 text-xs text-stone-400">
+                      {team.length === 0
+                        ? 'Equipe em formação'
+                        : team.length === 1
+                          ? '1 profissional'
+                          : team.length + ' profissionais'}
+                    </p>
+                    <div className="mt-3 flex -space-x-3">
+                      {team.slice(0, 5).map((b) => (
+                        <span key={b.id} className="relative">
+                          {b.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={b.photo_url}
+                              alt={b.full_name}
+                              className="h-9 w-9 rounded-full border-2 border-stone-950 object-cover"
+                            />
+                          ) : (
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-stone-950 bg-stone-800 text-[11px] font-bold text-amber-400">
+                              {initials(b.full_name)}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-amber-400">
+                      Ver profissionais
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </a>
+                )
+              })}
+            </div>
+          )}
+
+          {companies.length === 0 && (
+          <>
           {/* filtro por especialidade */}
           {specialties.length > 0 && (
             <div className="mt-6 flex flex-wrap gap-2">
@@ -250,6 +331,8 @@ export default async function HomePage({
               </p>
             )}
           </div>
+          </>
+          )}
         </div>
       </section>
 

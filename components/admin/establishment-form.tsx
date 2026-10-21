@@ -3,15 +3,21 @@
 import { useActionState } from 'react'
 import { Save } from 'lucide-react'
 import { saveEstablishmentAction, type AdminFormState } from '@/actions/admin'
+import { saveCompanyAction, type CompanyState } from '@/actions/company'
 import type { Establishment } from '@/lib/types'
+
+type FormState = AdminFormState & CompanyState
 
 export default function EstablishmentForm({
   establishment,
+  mode = 'workspace',
 }: {
   establishment: Establishment | null
+  mode?: 'workspace' | 'company'
 }) {
-  const [state, formAction, isPending] = useActionState<AdminFormState, FormData>(
-    saveEstablishmentAction,
+  const isCompany = mode === 'company'
+  const [state, formAction, isPending] = useActionState<FormState, FormData>(
+    isCompany ? saveCompanyAction : saveEstablishmentAction,
     {}
   )
 
@@ -19,16 +25,18 @@ export default function EstablishmentForm({
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.error && <div className="error-box">{state.error}</div>}
+      {state.error && <div className="error-box" role="alert">{state.error}</div>}
       {state.ok && !state.error && (
-        <div className="ok-box">Dados da barbearia salvos com sucesso!</div>
+        <div className="ok-box" role="status">
+          {isCompany ? 'Dados da empresa salvos com sucesso!' : 'Dados da barbearia salvos com sucesso!'}
+        </div>
       )}
 
       {e && <input type="hidden" name="id" value={e.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
-          <label className="label" htmlFor="est-name">Nome da barbearia *</label>
+          <label className="label" htmlFor="est-name">{isCompany ? 'Nome da empresa *' : 'Nome da barbearia *'}</label>
           <input id="est-name" name="name" required defaultValue={e?.name ?? ''} className="input" placeholder="BarberPro Studio" />
         </div>
 

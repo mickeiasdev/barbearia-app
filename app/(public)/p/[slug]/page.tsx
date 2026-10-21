@@ -31,9 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProfessionalPage({ params }: Props) {
   const { slug } = await params
 
-  // no site de um profissional (subdomínio), o perfil é a própria home
+  // no site de um profissional ou de uma empresa, o perfil é a home
   const host = await requireKnownHost()
-  if (host.workspace) redirect('/')
+  if (host.workspace || host.company) redirect('/')
 
   const supabase = await createClient()
 

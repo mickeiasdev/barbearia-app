@@ -36,9 +36,11 @@ export default async function SiteHeaderMinimal({
             <span className="block truncate font-serif text-base font-bold uppercase tracking-wide text-stone-100">
               {brand}
             </span>
-            <span className="block truncate text-[11px] text-stone-400">
-              {establishment.name}
-            </span>
+            {barber && (
+              <span className="block truncate text-[11px] text-stone-400">
+                {establishment.name}
+              </span>
+            )}
           </span>
         </Link>
 

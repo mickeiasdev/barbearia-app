@@ -110,11 +110,26 @@ export default async function AgendarPage({
   // PASSO 1 — escolher o profissional
   // ============================================================
   if (!barbeiroId) {
-    const { data: barbersData } = await supabase
+    let barbersQuery = supabase
       .from('barbers')
       .select('*, establishment:establishments(name, address)')
       .eq('is_active', true)
       .order('full_name')
+
+    // no site de uma EMPRESA, o passo 1 mostra só os profissionais dela
+    if (host.company) {
+      const { data: children } = await supabase
+        .from('establishments')
+        .select('id')
+        .eq('parent_id', host.company.id)
+      const ids = ((children ?? []) as { id: string }[]).map((c) => c.id)
+      barbersQuery = barbersQuery.in(
+        'establishment_id',
+        ids.length > 0 ? ids : ['00000000-0000-0000-0000-000000000000']
+      )
+    }
+
+    const { data: barbersData } = await barbersQuery
     let professionals = (barbersData ?? []) as unknown as BarberWithPlace[]
 
     // deep-link /agendar?servico=X: mostra quem executa o serviço

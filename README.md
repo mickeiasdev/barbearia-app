@@ -116,6 +116,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0004_multi_workspace.sql`](supabase/migrations/0004_multi_workspace.sql) (**multi-espaço**: cada barbeiro é admin do próprio espaço; RLS por espaço; `create_workspace`) → **Run**;
 - E com [`supabase/migrations/0005_new_features.sql`](supabase/migrations/0005_new_features.sql) (**novos recursos**: folgas pontuais, portfólio, avaliações, favoritos, no-show, desconto/estorno no PDV, perfil público `/p/slug`, lembretes 24h, Pix antecipado) → **Run**;
 - E com [`supabase/migrations/0006_master_control.sql`](supabase/migrations/0006_master_control.sql) (**controle master**: cadastro de espaços/barbeiros exclusivo do administrador master; auto-cadastro de profissional desligado) → **Run**;
+- E com [`supabase/migrations/0007_company_hierarchy.sql`](supabase/migrations/0007_company_hierarchy.sql) (**hierarquia em 3 níveis**: empresas (`is_company`) agrupam espaços de profissionais (`parent_id`); 1º barbeiro vira gerenciador da empresa) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -147,6 +148,12 @@ update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
 
 Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
+
+### Hierarquia em 3 níveis: plataforma → empresas → profissionais
+- **Site principal** (`SEUDOMINIO`): diretório das **empresas** cadastradas (Painel Master → Empresas).
+- **Site da empresa** (`{empresa}.SEUDOMINIO`): endereço/horários da unidade + os **profissionais que trabalham nela**, cada um com link para o site próprio.
+- **Site do profissional** (`{nome}.SEUDOMINIO`): serviços, portfólio, avaliações e agendamento dele — sem nunca mostrar concorrentes.
+- Ao cadastrar um barbeiro numa empresa, o **primeiro** vira **gerenciador dela**: no painel dele aparece **"Minha empresa"** (`/admin/empresa`), onde edita os dados como preferir e **adiciona gerenciadores por e-mail** (só aceita logins de barbeiros vinculados à empresa).
 
 ### Sites por subdomínio (um endereço para cada profissional)
 Cada espaço ganha um **site próprio** no subdomínio igual ao slug dele — `lucas.seudominio.com.br` mostra **só o Lucas**: landing com foto, nota, serviços, portfólio e avaliações; o agendamento já entra travado nele; a loja exibe apenas os produtos dele. Nenhum concorrente aparece (nem no HTML invisível). O domínio principal continua sendo a plataforma com todos.

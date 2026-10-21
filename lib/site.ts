@@ -6,12 +6,14 @@ import type { Barber, Establishment } from '@/lib/types'
 
 // Domínio(s) raiz da plataforma — configure no .env.local / Vercel:
 //   NEXT_PUBLIC_ROOT_DOMAINS=hsbarbearia.com.br,localhost
-// Subdomínios (lucas.hsbarbearia.com.br) viram o site DO profissional.
+// - Raiz: plataforma (lista as empresas)
+// - {empresa}.raiz: site da empresa (lista os profissionais dela)
+// - {profissional}.raiz: site próprio do profissional
 const ROOT_DOMAINS_RAW = process.env.NEXT_PUBLIC_ROOT_DOMAINS ?? ''
 
 /**
- * Extrai o subdomínio (= slug do espaço) do host atual.
- * Retorna null para o domínio raiz, www e hosts que não são subdomínio.
+ * Extrai o subdomínio do host atual (slug de empresa ou de profissional).
+ * Retorna null para a raiz, www e hosts que não são subdomínio.
  */
 export function parseSubdomain(host: string | null): string | null {
   if (!host) return null
@@ -43,34 +45,23 @@ export function parseSubdomain(host: string | null): string | null {
   return null
 }
 
-/**
- * Para páginas que exibem dados de profissionais (home, equipe, loja,
- * serviços, agendamento, perfil): em subdomínio desconhecido, NÃO renderiza
- * nada (nem no HTML invisível) — vira 404 limpo.
- */
-export async function requireKnownHost(): Promise<HostContext> {
-  const ctx = await getHostContext()
-  if (ctx.sub && !ctx.workspace) notFound()
-  return ctx
-}
-
 export interface HostWorkspace {
   establishment: Establishment
   barbers: Barber[]
 }
 
 export interface HostContext {
-  /** slug do subdomínio (null = domínio principal da plataforma) */
+  /** slug do subdomínio (null = site principal da plataforma) */
   sub: string | null
-  /** espaço do subdomínio (null quando sub é nulo OU não existe) */
+  /** subdomínio é uma EMPRESA (lista os profissionais dela) */
+  company: Establishment | null
+  /** subdomínio é o site de UM profissional */
   workspace: HostWorkspace | null
 }
 
 /**
- * Contexto do host atual (cacheado por request):
- * - sub null → site plataforma (mostra todos os profissionais);
- * - sub + workspace → o visitante está no site de UM profissional;
- * - sub sem workspace → subdomínio configurado que não bate com espaço.
+ * Contexto do host atual (cacheado por request).
+ * Raiz → plataforma. {slug} → empresa (is_company) ou profissional.
  */
 export const getHostContext = cache(async (): Promise<HostContext> => {
   let sub: string | null = null
@@ -80,9 +71,9 @@ export const getHostContext = cache(async (): Promise<HostContext> => {
   } catch {
     sub = null
   }
-  if (!sub) return { sub: null, workspace: null }
+  if (!sub) return { sub: null, company: null, workspace: null }
   if (!/^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$/.test(sub)) {
-    return { sub, workspace: null }
+    return { sub, company: null, workspace: null }
   }
 
   try {
@@ -92,23 +83,47 @@ export const getHostContext = cache(async (): Promise<HostContext> => {
       .select('*')
       .eq('slug', sub)
       .maybeSingle()
-    if (!est) return { sub, workspace: null }
+    if (!est) return { sub, company: null, workspace: null }
+    const place = est as Establishment
+
+    if (place.is_company) {
+      return { sub, company: place, workspace: null }
+    }
 
     const { data: barbers } = await supabase
       .from('barbers')
       .select('*')
-      .eq('establishment_id', (est as Establishment).id)
+      .eq('establishment_id', place.id)
       .eq('is_active', true)
       .order('full_name')
 
     return {
       sub,
-      workspace: {
-        establishment: est as Establishment,
-        barbers: (barbers ?? []) as Barber[],
-      },
+      company: null,
+      workspace: { establishment: place, barbers: (barbers ?? []) as Barber[] },
     }
   } catch {
-    return { sub, workspace: null }
+    return { sub, company: null, workspace: null }
   }
 })
+
+/**
+ * Para páginas que exibem dados de profissionais: em subdomínio
+ * desconhecido NÃO renderiza nada (nem no HTML invisível) — vira 404.
+ */
+export async function requireKnownHost(): Promise<HostContext> {
+  const ctx = await getHostContext()
+  if (ctx.sub && !ctx.workspace && !ctx.company) notFound()
+  return ctx
+}
+
+/** URL absoluta do site de uma empresa/profissional pelo slug. */
+export function subdomainUrl(slug: string): string {
+  const root =
+    (process.env.NEXT_PUBLIC_ROOT_DOMAINS ?? '')
+      .split(',')
+      .map((d) => d.trim())
+      .filter(Boolean)[0] ?? null
+  if (root && root !== 'localhost') return 'https://' + slug + '.' + root
+  return 'http://' + slug + '.localhost:3000'
+}

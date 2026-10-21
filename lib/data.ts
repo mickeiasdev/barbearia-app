@@ -48,6 +48,26 @@ export async function isPlatformAdmin(supabase: Supabase): Promise<boolean> {
   return !!data
 }
 
+/**
+ * A EMPRESA que o usuário logado gerencia (se ele for gerenciador
+ * de alguma empresa — o 1º barbeiro criado nela ou um convidado).
+ * Retorna null se ele só administra o próprio espaço de trabalho.
+ */
+export async function getMyCompany(supabase: Supabase): Promise<Establishment | null> {
+  const { data: auth } = await supabase.auth.getUser()
+  if (!auth.user) return null
+
+  const { data } = await supabase
+    .from('establishments')
+    .select('*, establishment_admins!inner(profile_id)')
+    .eq('establishment_admins.profile_id', auth.user.id)
+    .eq('is_company', true)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle()
+  return (data as unknown as Establishment | null) ?? null
+}
+
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
 /**
@@ -109,6 +129,7 @@ export async function requireAdminPage(): Promise<{
   profile: Profile
   establishment: Establishment | null
   isMaster: boolean
+  company: Establishment | null
 }> {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -124,6 +145,7 @@ export async function requireAdminPage(): Promise<{
 
   const isMaster = await isPlatformAdmin(supabase)
   const establishment = await getMyWorkspace(supabase)
+  const company = await getMyCompany(supabase)
 
   return {
     supabase,
@@ -131,6 +153,7 @@ export async function requireAdminPage(): Promise<{
     profile: profile as Profile,
     establishment,
     isMaster,
+    company,
   }
 }
 

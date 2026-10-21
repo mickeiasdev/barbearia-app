@@ -26,6 +26,8 @@ export interface Establishment {
   slug: string | null
   require_prepayment: boolean
   plan: string
+  parent_id: string | null
+  is_company: boolean
   created_at: string
 }
 

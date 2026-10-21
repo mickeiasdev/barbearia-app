@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL } from '@/lib/utils'
 import AddToCartButton from '@/components/add-to-cart-button'
+import { redirect } from 'next/navigation'
 import { requireKnownHost } from '@/lib/site'
 import type { Product } from '@/lib/types'
 
@@ -22,8 +23,10 @@ export default async function LojaPage({
 
   const supabase = await createClient()
 
-  // subdomínio: a loja mostra apenas os produtos do profissional do site
+  // subdomínio: a loja mostra apenas os produtos do profissional do site;
+  // no site de uma EMPRESA, a loja fica na home (cada profissional tem a sua)
   const host = await requireKnownHost()
+  if (host.company) redirect('/')
   const hostEstId = host.workspace?.establishment.id ?? null
 
   let query = supabase

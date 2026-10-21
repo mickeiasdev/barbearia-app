@@ -5,15 +5,15 @@ import { UserPlus } from 'lucide-react'
 import { masterCreateBarberAction, type MasterState } from '@/actions/master'
 
 interface Props {
-  spaces: { id: string; name: string }[]
+  companies: { id: string; name: string }[]
 }
 
-export default function MasterBarberForm({ spaces }: Props) {
+export default function MasterBarberForm({ companies }: Props) {
   const [state, formAction, isPending] = useActionState<MasterState, FormData>(
     masterCreateBarberAction,
     {}
   )
-  const [unitMode, setUnitMode] = useState(spaces.length > 0 ? 'existing' : 'new')
+  const [companyMode, setCompanyMode] = useState(companies.length > 0 ? 'existing' : 'new')
 
   return (
     <form action={formAction} className="space-y-4">
@@ -50,69 +50,75 @@ export default function MasterBarberForm({ spaces }: Props) {
         </div>
       </div>
 
-      {/* local de trabalho */}
+      {/* empresa onde vai trabalhar */}
       <div>
-        <span className="label">Onde ele vai trabalhar?</span>
+        <span className="label">Em qual empresa ele vai trabalhar?</span>
         <div className="flex flex-wrap gap-2">
-          {spaces.length > 0 && (
+          {companies.length > 0 && (
             <button
               type="button"
-              onClick={() => setUnitMode('existing')}
-              aria-pressed={unitMode === 'existing'}
+              onClick={() => setCompanyMode('existing')}
+              aria-pressed={companyMode === 'existing'}
               className={
                 'badge ' +
-                (unitMode === 'existing'
+                (companyMode === 'existing'
                   ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
                   : 'border-stone-700 bg-stone-800/60 text-stone-400')
               }
             >
-              Local já existente
+              Empresa já existente
             </button>
           )}
           <button
             type="button"
-            onClick={() => setUnitMode('new')}
-            aria-pressed={unitMode === 'new'}
+            onClick={() => setCompanyMode('new')}
+            aria-pressed={companyMode === 'new'}
             className={
               'badge ' +
-              (unitMode === 'new'
+              (companyMode === 'new'
                 ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
                 : 'border-stone-700 bg-stone-800/60 text-stone-400')
             }
           >
-            Novo local
+            Nova empresa
           </button>
         </div>
       </div>
 
-      {unitMode === 'existing' ? (
+      {companyMode === 'existing' ? (
         <div>
-          <label htmlFor="mb-base" className="label">Copiar o local de…</label>
-          <select id="mb-base" name="base_establishment_id" required className="input">
-            {spaces.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+          <label htmlFor="mb-company" className="label">Empresa</label>
+          <select id="mb-company" name="company_id" required className="input">
+            {companies.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           <p className="mt-1 text-[11px] text-stone-400">
-            O barbeiro ganha um espaço independente com o mesmo endereço, telefone e
-            horários deste local — serviços, produtos, clientes e vendas são só dele.
+            O barbeiro ganha um site próprio ({'{'}nome{'}'}.SEU_DOMÍNIO) e operação independente
+            (serviços, produtos, clientes e vendas), no endereço da empresa.
           </p>
         </div>
       ) : (
         <>
-          <input type="hidden" name="base_establishment_id" value="" />
+          <input type="hidden" name="company_id" value="" />
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label htmlFor="mb-unit-name" className="label">Nome do local *</label>
-              <input id="mb-unit-name" name="unit_name" required={unitMode === 'new'} className="input" placeholder="Ex.: HS Barearia — Unidade Centro" />
+              <label htmlFor="mb-company-name" className="label">Nome da empresa *</label>
+              <input
+                id="mb-company-name"
+                name="company_name"
+                required={companyMode === 'new'}
+                className="input"
+                placeholder="Ex.: HS Barearia — Unidade Centro"
+              />
             </div>
             <div>
-              <label htmlFor="mb-unit-address" className="label">Endereço</label>
-              <input id="mb-unit-address" name="unit_address" className="input" placeholder="Rua, número, cidade" />
+              <label htmlFor="mb-company-address" className="label">Endereço</label>
+              <input id="mb-company-address" name="company_address" className="input" placeholder="Rua, número, cidade" />
             </div>
             <div>
-              <label htmlFor="mb-unit-wa" className="label">WhatsApp do local</label>
-              <input id="mb-unit-wa" name="unit_whatsapp" className="input" placeholder="(11) 99999-9999" />
+              <label htmlFor="mb-company-wa" className="label">WhatsApp da empresa</label>
+              <input id="mb-company-wa" name="company_whatsapp" className="input" placeholder="(11) 99999-9999" />
             </div>
           </div>
         </>

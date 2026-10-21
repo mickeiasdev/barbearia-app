@@ -30,22 +30,23 @@ export default async function PublicLayout({
 }: { children: React.ReactNode }) {
   const host = await getHostContext()
 
-  // subdomínio configurado que não bate com nenhum espaço: não vaza a plataforma
-  if (host.sub && !host.workspace) {
+  // subdomínio configurado que não bate com empresa nem profissional:
+  // não vaza a plataforma
+  if (host.sub && !host.workspace && !host.company) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
         <p className="font-serif text-5xl font-bold text-amber-500">404</p>
         <h1 className="text-lg font-semibold text-stone-200">Site não encontrado</h1>
         <p className="max-w-sm text-sm text-stone-400">
           O endereço <span className="font-mono text-stone-300">{host.sub}</span> não corresponde a
-          nenhum profissional ativo. Confira o link ou fale com a barbearia.
+          nenhum site ativo. Confira o link ou fale com a barbearia.
         </p>
         <a href="/" className="btn btn-primary">Ir para o site principal</a>
       </main>
     )
   }
 
-  // SITE DE UM PROFISSIONAL (subdomínio): header/footer próprios, sem concorrentes
+  // SITE DE UM PROFISSIONAL (subdomínio dele)
   if (host.workspace) {
     const { establishment, barbers } = host.workspace
     return (
@@ -54,6 +55,19 @@ export default async function PublicLayout({
           <SiteHeaderMinimal establishment={establishment} barber={barbers[0] ?? null} />
           <main className="flex-1">{children}</main>
           <MinimalFooter establishment={establishment} />
+        </div>
+      </CartProvider>
+    )
+  }
+
+  // SITE DE UMA EMPRESA (subdomínio dela): mesmo shell, sem barbeiro fixo
+  if (host.company) {
+    return (
+      <CartProvider>
+        <div className="flex min-h-screen flex-col">
+          <SiteHeaderMinimal establishment={host.company} barber={null} />
+          <main className="flex-1">{children}</main>
+          <MinimalFooter establishment={host.company} />
         </div>
       </CartProvider>
     )

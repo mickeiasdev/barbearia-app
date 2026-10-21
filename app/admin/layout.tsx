@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Painel Admin' }
 export default async function AdminLayout({
   children,
 }: { children: React.ReactNode }) {
-  const { profile, supabase, establishment, isMaster } = await requireAdminPage()
+  const { profile, supabase, establishment, isMaster, company } = await requireAdminPage()
 
   // master sem espaço vai direto ao Painel Master (ele administra os demais)
   if (!establishment && isMaster) {
@@ -44,6 +44,7 @@ export default async function AdminLayout({
         adminName={profile.full_name || 'Admin'}
         establishmentName={establishment.name}
         isMaster={isMaster}
+        isCompanyManager={!!company}
       />
       <div className="min-w-0 flex-1">
         <div className="h-[104px] md:hidden" />
