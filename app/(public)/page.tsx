@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ArrowRight, Calendar, Clock, MapPin, Scissors, Sparkles, Star, Store } from 'lucide-react'
+import { Calendar, Clock, MapPin, Scissors, Sparkles, Star, Store } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatBRL, formatDuration, initials } from '@/lib/utils'
 import Stars from '@/components/stars'
@@ -336,10 +336,6 @@ export default async function HomePage({
             <Link href="/barbeiros" className="btn btn-primary px-8 py-3 text-base">
               <Calendar className="h-5 w-5" />
               Agendar meu horário
-            </Link>
-            <Link href="/registrar" className="btn btn-outline px-8 py-3 text-base">
-              Sou barbeiro — criar meu espaço
-              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

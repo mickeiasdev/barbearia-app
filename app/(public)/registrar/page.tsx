@@ -12,8 +12,8 @@ export default function RegistrarPage() {
           Criar conta
         </h1>
         <p className="mb-6 mt-1 text-sm text-stone-400">
-          Clientes agendam horários; profissionais ganham um espaço próprio
-          com agenda, serviços, loja e Pix.
+          Crie sua conta para agendar horários, acompanhar seus atendimentos e
+          comprar na loja. Profissionais entram apenas por convite do administrador.
         </p>
 
         <RegisterForm />

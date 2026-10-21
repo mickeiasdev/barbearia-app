@@ -10,14 +10,12 @@ import {
   Package,
   Receipt,
   Repeat,
-  Scissors,
   Star,
   User,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/data'
 import PixCard from '@/components/pix-card'
-import WorkspaceCreateForm from '@/components/workspace-create-form'
 import Stars from '@/components/stars'
 import ReviewForm from '@/components/review-form'
 import { buildPixPayload } from '@/lib/pix'
@@ -636,18 +634,6 @@ export default async function MinhaContaPage({
             </p>
           </div>
 
-          {user.profile?.role === 'client' && (
-            <div className="card border-amber-500/25 bg-amber-500/5 p-6">
-              <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-stone-100">
-                <Scissors className="h-5 w-5 text-amber-500" /> É profissional?
-              </h2>
-              <p className="mb-4 text-sm text-stone-400">
-                Crie seu espaço com agenda própria, serviços, loja e Pix — você
-                administra tudo por aqui.
-              </p>
-              <WorkspaceCreateForm compact />
-            </div>
-          )}
         </aside>
       </div>
     </main>

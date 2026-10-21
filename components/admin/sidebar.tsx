@@ -11,6 +11,7 @@ import {
   Receipt,
   Scissors,
   Settings,
+  ShieldCheck,
   Sparkles,
   Store,
   Users,
@@ -29,6 +30,8 @@ const LINKS = [
   { href: '/admin/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/admin/configuracoes', label: 'Configurações', icon: Settings },
 ]
+
+const MASTER_LINK = { href: '/admin/master', label: 'Painel Master', icon: ShieldCheck }
 
 function useActive(href: string, exact?: boolean) {
   const pathname = usePathname()
@@ -56,9 +59,11 @@ function NavLink({ href, label, icon: Icon, exact }: { href: string; label: stri
 export default function AdminSidebar({
   adminName,
   establishmentName,
+  isMaster = false,
 }: {
   adminName: string
   establishmentName: string | null
+  isMaster?: boolean
 }) {
   return (
     <>
@@ -77,6 +82,7 @@ export default function AdminSidebar({
         </Link>
 
         <nav className="flex flex-1 flex-col gap-1">
+          {isMaster && <NavLink {...MASTER_LINK} />}
           {LINKS.map((l) => (
             <NavLink key={l.href} {...l} />
           ))}
@@ -119,6 +125,11 @@ export default function AdminSidebar({
           </form>
         </div>
         <nav className="flex gap-1 overflow-x-auto px-2 pb-2">
+          {isMaster && (
+            <div className="shrink-0">
+              <NavLink {...MASTER_LINK} />
+            </div>
+          )}
           {LINKS.map((l) => (
             <div key={l.href} className="shrink-0">
               <NavLink {...l} />

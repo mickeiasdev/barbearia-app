@@ -65,10 +65,6 @@ export async function registerAction(
   const phone = String(formData.get('phone') ?? '').trim()
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
-  const accountType =
-    String(formData.get('account_type') ?? 'client') === 'professional'
-      ? 'professional'
-      : 'client'
 
   if (!fullName) return { error: 'Informe seu nome completo.' }
   if (!email.includes('@')) return { error: 'Informe um e-mail válido.' }
@@ -89,35 +85,12 @@ export async function registerAction(
 
   // Login automático quando a confirmação de e-mail está desativada.
   if (data.session) {
-    if (accountType === 'professional') {
-      const workspaceName =
-        String(formData.get('workspace_name') ?? '').trim() || fullName + ' — Barbearia'
-      const { error: wsError } = await supabase.rpc('create_workspace', {
-        p_name: workspaceName,
-        p_address: String(formData.get('workspace_address') ?? '').trim() || null,
-        p_phone: phone || null,
-        p_whatsapp: String(formData.get('workspace_whatsapp') ?? '').trim() || phone || null,
-      })
-      if (wsError) {
-        return {
-          error:
-            'Conta criada, mas não conseguimos criar seu espaço: ' +
-            friendlyDbError(wsError.message) +
-            ' Entre e tente novamente em Minha Conta → Criar meu espaço.',
-        }
-      }
-      revalidatePath('/', 'layout')
-      redirect('/admin')
-    }
     revalidatePath('/', 'layout')
     redirect('/')
   }
 
   return {
-    notice:
-      accountType === 'professional'
-        ? 'Conta criada! Confirme seu e-mail, entre na sua conta e toque em "Criar meu espaço" em Minha Conta para ativar seu painel.'
-        : 'Conta criada! Verifique sua caixa de e-mail para confirmar o cadastro antes de entrar.',
+    notice: 'Conta criada! Verifique sua caixa de e-mail para confirmar o cadastro antes de entrar.',
   }
 }
 

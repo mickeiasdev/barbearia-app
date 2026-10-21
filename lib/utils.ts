@@ -59,6 +59,7 @@ export function friendlyDbError(message: string): string {
   if (msg.includes('ausente neste hor')) return 'O profissional está ausente neste horário (folga/bloqueio).'
   if (msg.includes('fora da jornada')) return 'Horário fora da jornada do profissional.'
   if (msg.includes('establishments_slug_key') || msg.includes('slug')) return 'Este endereço de perfil já está em uso. Escolha outro.'
+  if (msg.includes('apenas pelo administrador master')) return 'Cadastro de espaços e barbeiros é feito apenas pelo administrador master.'
   if (msg.includes('foreign key') || msg.includes('violates')) return 'Não é possível concluir: existem registros vinculados.'
   return message
 }

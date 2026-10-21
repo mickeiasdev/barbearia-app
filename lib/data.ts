@@ -1,10 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { Barber, Establishment, Profile } from '@/lib/types'
 
+const WORKSPACE_COOKIE = 'dsh-master-ws'
+
 /**
- * Todos os espaços cadastrados (público). Cada profissional
- * independente tem o seu — a plataforma mostra todos.
+ * Todos os espaços cadastrados (o master vê todos; demais papéis
+ * veem apenas os que administram via RLS).
  */
 export async function getEstablishments(): Promise<Establishment[]> {
   const supabase = await createClient()
@@ -39,16 +42,39 @@ export async function getCurrentUser(): Promise<{ id: string; profile: Profile |
   return { id: data.user.id, profile: (profile as Profile | null) ?? null }
 }
 
+/** O usuário logado é o administrador MASTER da plataforma? */
+export async function isPlatformAdmin(supabase: Supabase): Promise<boolean> {
+  const { data } = await supabase.rpc('is_platform_admin')
+  return !!data
+}
+
 type Supabase = Awaited<ReturnType<typeof createClient>>
 
 /**
  * O espaço de trabalho que o usuário logado administra:
- * o espaço que ele criou (dono) ou do qual foi convidado.
- * Superadmins sem espaço próprio recebem null (onboarding).
+ * - ADMIN MASTER: o espaço escolhido no painel master (cookie);
+ *   sem cookie, o primeiro espaço que ele administra; sem nenhum, null.
+ * - Admin comum: o espaço onde é dono ou convidado.
  */
 export async function getMyWorkspace(supabase: Supabase): Promise<Establishment | null> {
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) return null
+
+  const master = await isPlatformAdmin(supabase)
+
+  if (master) {
+    // cookie do painel master: o master pode inspecionar qualquer espaço
+    const cookieStore = await cookies()
+    const wsId = cookieStore.get(WORKSPACE_COOKIE)?.value
+    if (wsId && /^[0-9a-f-]{36}$/i.test(wsId)) {
+      const { data: chosen } = await supabase
+        .from('establishments')
+        .select('*')
+        .eq('id', wsId)
+        .maybeSingle()
+      if (chosen) return (chosen as Establishment | null) ?? null
+    }
+  }
 
   const [{ data: memberRows }, { data: ownedRows }] = await Promise.all([
     supabase
@@ -82,6 +108,7 @@ export async function requireAdminPage(): Promise<{
   user: { id: string; email?: string }
   profile: Profile
   establishment: Establishment | null
+  isMaster: boolean
 }> {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
@@ -95,6 +122,7 @@ export async function requireAdminPage(): Promise<{
 
   if (!profile || (profile as Profile).role !== 'admin') redirect('/')
 
+  const isMaster = await isPlatformAdmin(supabase)
   const establishment = await getMyWorkspace(supabase)
 
   return {
@@ -102,6 +130,7 @@ export async function requireAdminPage(): Promise<{
     user: { id: auth.user.id, email: auth.user.email },
     profile: profile as Profile,
     establishment,
+    isMaster,
   }
 }
 
@@ -109,7 +138,7 @@ export async function requireAdminPage(): Promise<{
  * Usado em Server Actions: exige admin e devolve o espaço dele.
  * Retorna null se não houver sessão/papel — actions respondem
  * "Sem permissão." Um admin sem espaço recebe establishment null
- * e a action orienta a criar o espaço primeiro.
+ * e a action orienta a falar com o administrador master.
  */
 export async function requireAdminAction(): Promise<{
   supabase: Supabase
@@ -177,3 +206,6 @@ export async function getActiveBarbers(establishmentId: string): Promise<Barber[
     .order('full_name')
   return (data ?? []) as Barber[]
 }
+
+/** Nome do cookie de troca de espaço do painel master. */
+export const MASTER_WS_COOKIE = WORKSPACE_COOKIE

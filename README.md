@@ -115,6 +115,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0003_pix_storage.sql`](supabase/migrations/0003_pix_storage.sql) (chave Pix + bucket de imagens) → **Run**;
 - E com [`supabase/migrations/0004_multi_workspace.sql`](supabase/migrations/0004_multi_workspace.sql) (**multi-espaço**: cada barbeiro é admin do próprio espaço; RLS por espaço; `create_workspace`) → **Run**;
 - E com [`supabase/migrations/0005_new_features.sql`](supabase/migrations/0005_new_features.sql) (**novos recursos**: folgas pontuais, portfólio, avaliações, favoritos, no-show, desconto/estorno no PDV, perfil público `/p/slug`, lembretes 24h, Pix antecipado) → **Run**;
+- E com [`supabase/migrations/0006_master_control.sql`](supabase/migrations/0006_master_control.sql) (**controle master**: cadastro de espaços/barbeiros exclusivo do administrador master; auto-cadastro de profissional desligado) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -134,11 +135,13 @@ insert into public.admin_emails (email) values ('seu-email@exemplo.com');
 update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 ```
 
-### 3b. Como funciona o multi-espaço (vários profissionais)
-- **Cada barbeiro é dono do próprio espaço.** Ao se cadastrar como **Profissional** (ou tocando em "Criar meu espaço" em Minha Conta), a pessoa ganha um espaço de trabalho com agenda, serviços, produtos, Pix e painel próprios — isolados dos demais por RLS.
-- **Um espaço pode ter vários administradores**: em *Painel Admin → Configurações → Administradores do espaço*, o dono convida qualquer conta por e-mail, sem SQL.
-- **E-mails em `admin_emails` são superadmins da plataforma**: enxergam e gerenciam todos os espaços (suporte) e podem "adotar" espaços antigos sem dono no primeiro login.
-- **Clientes**: navegam por profissional (o wizard de agendamento começa pedindo o profissional) e veem os dados de cada espaço no site, na loja e nos Pix gerados.
+### 3b. Como funciona o controle master (modelo atual)
+- **Só o administrador master cria profissionais.** O registro público do site cria apenas contas de **cliente**; barbeiros entram por convite.
+- **Painel Master** (`/admin/master`, exclusivo do master): cadastra barbeiros com **login e senha**, define **onde cada um trabalha** (local novo ou copiado de um espaço existente), remove/reativa acessos e gerencia qualquer espaço da plataforma.
+- **Cada barbeiro tem operação independente**: espaço próprio (serviços, preços, produtos, estoque, Pix, clientes, vendas e relatórios), isolado por RLS — mesmo local físico compartilhado.
+- **E-mails em `admin_emails` são masters da plataforma** (a sua conta). Requer `SUPABASE_SERVICE_ROLE_KEY` no `.env.local` para o Painel Master criar logins (a mesma chave usada pelo cron de lembretes).
+- **Um espaço ainda pode ter administradores extras**: em *Configurações → Administradores do espaço*.
+- **Clientes**: navegam por profissional (o wizard começa pedindo o profissional) e veem cada espaço no site, na loja e nos Pix gerados.
 
 ### 4. Facilitar o login em desenvolvimento
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).

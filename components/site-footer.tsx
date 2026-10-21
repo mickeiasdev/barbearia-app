@@ -34,11 +34,11 @@ export default function SiteFooter() {
         <div className="space-y-3 text-sm">
           <p className="label">Para profissionais</p>
           <div className="flex flex-col gap-2">
-            <Link href="/registrar" className="text-stone-400 hover:text-amber-400">Criar meu espaço</Link>
-            <Link href="/entrar" className="text-stone-400 hover:text-amber-400">Entrar no painel</Link>
+            <Link href="/entrar" className="text-stone-400 hover:text-amber-400">Entrar no meu painel</Link>
           </div>
           <p className="pt-2 text-xs text-stone-400">
-            Agenda própria, loja, Pix e relatórios — sem taxa sobre seus serviços.
+            Acesso por convite: só o administrador master cadastra barbeiros e
+            espaços. Agenda própria, loja, Pix e relatórios para cada profissional.
           </p>
         </div>
       </div>

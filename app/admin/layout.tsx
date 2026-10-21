@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import AdminSidebar from '@/components/admin/sidebar'
 import WorkspaceOnboarding from '@/components/admin/workspace-onboarding'
 import { requireAdminPage } from '@/lib/data'
@@ -8,7 +9,12 @@ export const metadata: Metadata = { title: 'Painel Admin' }
 export default async function AdminLayout({
   children,
 }: { children: React.ReactNode }) {
-  const { profile, supabase, establishment } = await requireAdminPage()
+  const { profile, supabase, establishment, isMaster } = await requireAdminPage()
+
+  // master sem espaço vai direto ao Painel Master (ele administra os demais)
+  if (!establishment && isMaster) {
+    redirect('/admin/master')
+  }
 
   // sem espaço: onboarding de criação (ou adoção, para superadmins)
   if (!establishment) {
@@ -37,6 +43,7 @@ export default async function AdminLayout({
       <AdminSidebar
         adminName={profile.full_name || 'Admin'}
         establishmentName={establishment.name}
+        isMaster={isMaster}
       />
       <div className="min-w-0 flex-1">
         <div className="h-[104px] md:hidden" />
