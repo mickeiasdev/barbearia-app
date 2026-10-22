@@ -12,9 +12,10 @@ import type { Barber, Establishment } from '@/lib/types'
 // - /{profissional}: caminho por barra no domínio principal
 const ROOT_DOMAINS_RAW = process.env.NEXT_PUBLIC_ROOT_DOMAINS ?? ''
 
-// Slug de empresa exibida na RAIZ do domínio principal (a "casa").
+// Slug de empresa exibida na RAIZ (opcional). Se VAZIO (padrão),
+// a raiz mostra a PLATAFORMA (vitrine + diretório de empresas).
 // Ex.: NEXT_PUBLIC_DEFAULT_COMPANY_SLUG=hsbarbearia → hsbarbearia.com.br
-// é o site da própria barbearia, com profissionais em /lucas, /hiago...
+// é o site da barbearia, com profissionais em /lucas, /hiago...
 const DEFAULT_COMPANY_SLUG = process.env.NEXT_PUBLIC_DEFAULT_COMPANY_SLUG ?? ''
 
 /**

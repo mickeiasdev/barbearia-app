@@ -185,13 +185,13 @@ Também configura **banner** (upload até 4MB), **nome de exibição** e **frase
 - **Site do profissional** (`{nome}.SEUDOMINIO`): serviços, portfólio, avaliações e agendamento dele — sem nunca mostrar concorrentes.
 - Ao cadastrar um barbeiro numa empresa, o **primeiro** vira **gerenciador dela**: no painel dele aparece **"Minha empresa"** (`/admin/empresa`), onde edita os dados como preferir e **adiciona gerenciadores por e-mail** (só aceita logins de barbeiros vinculados à empresa).
 
-### Endereços: caminhos na raiz (o jeito principal)
-Com `NEXT_PUBLIC_DEFAULT_COMPANY_SLUG=hsbarbearia` configurado:
-- **`SEUDOMINIO.com.br`** → o site da SUA barbearia (a casa): equipe, endereço e horários;
-- **`SEUDOMINIO.com.br/lucas`** → o site do Lucas (layout escolhido nas Configurações dele);
-- **`SEUDOMINIO.com.br/{qualquer-profissional}`** → pelo slug, sem subdomínio, sem DNS extra.
+### Endereços: a estrutura completa
+- **`SEUDOMINIO.com.br`** (raiz) → a **PLATAFORMA**: vitrine do produto, diretório de barbearias/salões e CTA "Criar meu negócio grátis";
+- **`SEUDOMINIO.com.br/{profissional}`** → site de cada profissional (layout escolhível);
+- **`{barbearia}.SEUDOMINIO.com.br`** → site de cada barbearia (subdomínio, DNS próprio);
+- **`{profissional}.SEUDOMINIO.com.br`** → alternativa por subdomínio (sem DNS extra se já tiver wildcard).
 
-Endereços que são rotas do sistema (`/agendar`, `/loja`, `/entrar`...) têm prioridade e **não podem ser usados como slug** (bloqueio no banco — migration 0010). No site da empresa, os cards dos profissionais apontam para os caminhos `/{slug}`.
+Para ativar a raiz como o site de UMA barbearia (modo "casa"), preencha `NEXT_PUBLIC_DEFAULT_COMPANY_SLUG=slug-da-barbearia` no .env. Se VAZIO (padrão), a raiz é a plataforma.
 
 ### Sites por subdomínio (alternativa, já pronta)
 Cada espaço ganha um **site próprio** no subdomínio igual ao slug dele — `lucas.seudominio.com.br` mostra **só o Lucas**: landing com foto, nota, serviços, portfólio e avaliações; o agendamento já entra travado nele; a loja exibe apenas os produtos dele. Nenhum concorrente aparece (nem no HTML invisível). O domínio principal continua sendo a plataforma com todos.
