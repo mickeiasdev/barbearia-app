@@ -34,6 +34,7 @@ export interface Establishment {
   display_name: string | null
   trial_ends_at: string | null
   plan_paid_until: string | null
+  vertical: string
   created_at: string
 }
 

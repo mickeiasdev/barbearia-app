@@ -85,7 +85,7 @@ export default function LandingEditorial({ data }: { data: LandingData }) {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-amber-500">Serviços & Preços</p>
             <h2 className="mt-2 font-serif text-4xl font-bold uppercase tracking-tight text-stone-100 md:text-5xl">
-              Menu do corte
+              {data.servicesTitle ?? 'Menu de serviços'}
             </h2>
           </div>
           <p className="max-w-xs text-sm text-stone-400">

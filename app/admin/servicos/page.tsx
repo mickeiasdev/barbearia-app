@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { requireAdminPage } from '@/lib/data'
 import { formatBRL, formatDuration } from '@/lib/utils'
+import { verticalName, catalogFor } from '@/lib/verticals'
 import ServiceForm from '@/components/admin/service-form'
-import { deleteServiceAction, toggleServiceAction } from '@/actions/admin'
+import { deleteServiceAction, toggleServiceAction, importCatalogAction } from '@/actions/admin'
 import type { Service } from '@/lib/types'
 import ActionButton from '@/components/admin/action-button'
 
@@ -33,6 +34,18 @@ export default async function AdminServicosPage({
     .order('name')
   const services = (servicesData ?? []) as Service[]
 
+  // nicho do espaço (herdado da empresa)
+  let vertical = establishment.vertical ?? 'barbearia'
+  if (establishment.parent_id) {
+    const { data: parent } = await supabase
+      .from('establishments')
+      .select('vertical')
+      .eq('id', establishment.parent_id)
+      .maybeSingle()
+    const p = parent as { vertical?: string } | null
+    if (p?.vertical) vertical = p.vertical
+  }
+
   return (
     <div>
       <h1 className="section-title">Serviços</h1>
@@ -42,6 +55,19 @@ export default async function AdminServicosPage({
 
       {sp.ok && <div className="ok-box mt-6">Operação realizada com sucesso.</div>}
       {sp.erro && <div className="error-box mt-6">{sp.erro}</div>}
+
+      {/* importar catálogo do nicho */}
+      {services.length === 0 && catalogFor(vertical).length > 0 && (
+        <form action={importCatalogAction} className="mt-6">
+          <ActionButton
+            className="btn btn-outline w-full"
+            pendingLabel="Importando..."
+            confirmMessage={'Importar o catálogo pronto de ' + verticalName(vertical) + '?'}
+          >
+            Importar catálogo pronto de {verticalName(vertical)}
+          </ActionButton>
+        </form>
+      )}
 
       {/* novo serviço */}
       <details className="card mt-8 p-0">

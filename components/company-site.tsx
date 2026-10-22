@@ -71,7 +71,7 @@ export default async function CompanySite({ company }: { company: Establishment 
   }
 
   const waHref = company.whatsapp
-    ? waLink(company.whatsapp, 'Olá! Vi o site da barbearia e quero agendar um horário.')
+    ? waLink(company.whatsapp, 'Olá! Vi o site e quero agendar um horário.')
     : null
 
   return (

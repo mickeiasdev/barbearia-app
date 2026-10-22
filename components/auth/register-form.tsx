@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { UserPlus } from 'lucide-react'
 import { registerAction, type AuthState } from '@/actions/auth'
+import GoogleButton from '@/components/auth/google-button'
 
 export default function RegisterForm() {
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(
@@ -71,6 +72,12 @@ export default function RegisterForm() {
       <p className="text-center text-[11px] text-stone-400">
         Profissionais entram apenas por convite do administrador da barbearia.
       </p>
+
+      <div className="flex items-center gap-3 text-xs text-stone-500">
+        <span className="h-px flex-1 bg-stone-800" /> ou <span className="h-px flex-1 bg-stone-800" />
+      </div>
+
+      <GoogleButton />
     </form>
   )
 }

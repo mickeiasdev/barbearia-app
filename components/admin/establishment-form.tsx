@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react'
 import { Save } from 'lucide-react'
 import { saveEstablishmentAction, type AdminFormState } from '@/actions/admin'
 import { saveCompanyAction, type CompanyState } from '@/actions/company'
+import { VERTICAL_OPTIONS, verticalName } from '@/lib/verticals'
 import type { Establishment } from '@/lib/types'
 
 type FormState = AdminFormState & CompanyState
@@ -263,6 +264,21 @@ export default function EstablishmentForm({
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
+        {isCompany && (
+          <div>
+            <label className="label" htmlFor="est-vertical">Nicho do negócio</label>
+            <select
+              id="est-vertical"
+              name="vertical"
+              defaultValue={e?.vertical ?? 'barbearia'}
+              className="input"
+            >
+              {VERTICAL_OPTIONS.map((v) => (
+                <option key={v.key} value={v.key}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="label" htmlFor="est-open">Abre às</label>
           <input id="est-open" name="opening_time" type="time" defaultValue={e?.opening_time?.slice(0, 5) ?? '09:00'} className="input" />

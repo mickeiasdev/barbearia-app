@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { waLink } from '@/lib/whatsapp'
 import { initials } from '@/lib/utils'
 import { dateKey } from '@/lib/tz'
+import { labelsFor } from '@/lib/verticals'
 import type { Barber, Establishment, Service } from '@/lib/types'
 import type { HostWorkspace } from '@/lib/site'
 
@@ -15,12 +16,12 @@ export interface LandingReview {
 export interface LandingData {
   est: Establishment
   barber: Barber | null
-  /** nome de exibição configurável (fallback: nome do barbeiro) */
   displayName: string
-  /** frase de apresentação configurável (fallback: bio do barbeiro) */
   tagline: string | null
   bannerUrl: string | null
   layout: 1 | 2 | 3
+  /** título da seção de catálogo conforme o nicho */
+  servicesTitle: string
   initialsName: string
   rating: number | null
   reviewCount: number
@@ -93,6 +94,7 @@ export async function getLandingData(workspace: HostWorkspace): Promise<LandingD
     tagline: est.tagline ?? main?.bio ?? null,
     bannerUrl: est.banner_url,
     layout,
+    servicesTitle: labelsFor(est.vertical).servicesTitle,
     initialsName: initials(main?.full_name ?? est.name),
     rating,
     reviewCount: reviews.length,

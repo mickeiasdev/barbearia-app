@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useActionState } from 'react'
 import { LogIn } from 'lucide-react'
 import { loginAction, type AuthState } from '@/actions/auth'
+import GoogleButton from '@/components/auth/google-button'
 
 export default function LoginForm({ next }: { next: string }) {
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(
@@ -56,6 +57,12 @@ export default function LoginForm({ next }: { next: string }) {
           Esqueci minha senha
         </Link>
       </p>
+
+      <div className="flex items-center gap-3 text-xs text-stone-500">
+        <span className="h-px flex-1 bg-stone-800" /> ou <span className="h-px flex-1 bg-stone-800" />
+      </div>
+
+      <GoogleButton next={next} />
     </form>
   )
 }

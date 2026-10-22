@@ -120,6 +120,7 @@ Funções e guardas no banco:
 - E com [`supabase/migrations/0008_presentation.sql`](supabase/migrations/0008_presentation.sql) (**apresentação configurável**: 3 layouts de site por barbeiro + banner, nome de exibição e frase) → **Run**;
 - E com [`supabase/migrations/0009_saas_billing.sql`](supabase/migrations/0009_saas_billing.sql) (**SaaS**: auto-onboarding de barbearias com trial 14 dias, gerente cadastra barbeiros, planos Pro/Business) → **Run**;
 - E com [`supabase/migrations/0010_reserved_slugs.sql`](supabase/migrations/0010_reserved_slugs.sql) (**endereços por caminho**: slugs reservados para rotas, slug da HS Barearia vira `hsbarbearia`, backfill de gerente) → **Run**;
+- E com [`supabase/migrations/0011_verticals.sql`](supabase/migrations/0011_verticals.sql) (**multi-nicho**: barbearia, salão, estética, unhas, tatuagem e personal — textos adaptados + catálogos prontos para importar) → **Run**;
 - (Opcional) Cole também o [`supabase/seed.sql`](supabase/seed.sql) para dados de demonstração — **edite-o antes e troque o e-mail pelo seu** (linha do `admin_emails`).
 
 ### 3. Promover você a administrador da PLATAFORMA
@@ -151,6 +152,17 @@ update public.profiles set role = 'admin' where email = 'seu-email@exemplo.com';
 Painel → **Authentication** → **Sign In / Providers** → **Email**: desligue **Confirm email** (para não depender de e-mail de confirmação; reative em produção se quiser).
 
 Em **Authentication → URL Configuration**, adicione as **Site URL / Redirect URLs** do seu ambiente (ex.: `http://localhost:3000/**` e o domínio de produção) — é o que permite o fluxo de **"Esqueci minha senha"** funcionar.
+
+### Multi-nicho (Barbearia, Salão, Estética, Unhas, Tatuagem, Personal)
+O nicho é escolhido no cadastro da barbearia e adaptado em tudo que o cliente final vê:
+- Textos: "Escolha o barbeiro" → "Escolha a manicure", "Barbeiros" → "Esteticistas" etc.;
+- **Catálogos prontos**: em *Admin → Serviços*, com um clique importa 4-6 serviços típicos do nicho (nomes, preços e durações) já vinculados aos profissionais;
+- *Configurações → Nicho do negócio*: troque quando quiser.
+
+### Login com Google
+1. **Supabase → Authentication → Providers → Google**: habilite e cole o Client ID/Secret do [Google Cloud Console](https://console.cloud.google.com/apis/credentials);
+2. No Google Cloud Console: **Authorized redirect URI** = `https://SEU-PROJETO.supabase.co/auth/v1/callback`;
+3. O botão "Continuar com Google" já aparece nas telas de login e cadastro.
 
 ### Vendendo o sistema (SaaS)
 - **Landing de vendas**: `/vender` — pitch, mockups, planos e FAQ. Aponte um domínio dedicado pra ela se quiser.

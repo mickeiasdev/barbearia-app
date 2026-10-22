@@ -66,6 +66,11 @@ export async function saveCompanyAction(
     return { error: 'O intervalo entre horários deve ficar entre 5 e 60 minutos.' }
   }
 
+  const verticalInput = String(formData.get('vertical') ?? '').trim()
+  const validVerticals = ['barbearia','salao','estetica','manicure','tatuagem','personal']
+  const vertical =
+    verticalInput && validVerticals.includes(verticalInput) ? verticalInput : undefined
+
   const values = {
     name,
     address,
@@ -76,6 +81,7 @@ export async function saveCompanyAction(
     closing_time: closingTime,
     slot_step_min: step,
     ...(slugInput !== null ? { slug: slugInput } : {}),
+    ...(vertical ? { vertical } : {}),
   }
 
   const { error } = await supabase

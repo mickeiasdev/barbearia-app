@@ -127,12 +127,13 @@ export default function VenderPage() {
             <ShieldCheck className="h-3.5 w-3.5" /> 14 dias de Pro grátis — sem cartão
           </p>
           <h1 className="mx-auto max-w-3xl font-serif text-4xl font-bold uppercase leading-tight tracking-tight text-stone-100 md:text-6xl">
-            O sistema completo da sua barbearia —{' '}
-            <span className="text-amber-500">sem taxa por corte</span>
+            O sistema completo do seu negócio —{' '}
+            <span className="text-amber-500">sem taxa por atendimento</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-stone-400">
-            Agendamento online, site próprio para cada barbeiro, PDV, Pix direto na sua conta,
-            avaliações e relatórios. Tudo em um só lugar, funcionando no celular.
+            Barbearias, salões, clínicas de estética, studios de unhas e tatuagem:
+            agendamento online, site próprio para cada profissional, PDV, Pix direto
+            na sua conta, avaliações e relatórios. Tudo no celular.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/registrar-empresa" className="btn btn-primary px-8 py-3.5 text-base">

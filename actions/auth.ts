@@ -293,12 +293,15 @@ export async function registerTenantAction(
 
   if (!companyName) return { error: 'Informe o nome da barbearia.' }
 
+  const vertical = String(formData.get('vertical') ?? 'barbearia') || 'barbearia'
+
   const { error } = await supabase.rpc('create_tenant', {
     p_company_name: companyName,
     p_address: address,
     p_whatsapp: whatsapp,
     p_opening: opening,
     p_closing: closing,
+    p_vertical: vertical,
   })
   if (error) return { error: friendlyDbError(error.message) }
 

@@ -81,7 +81,7 @@ export default function LandingSplit({ data }: { data: LandingData }) {
       <main className="min-w-0">
         {/* 01 — SERVIÇOS (linhas com preço pontilhado) */}
         <section className="px-6 py-14 md:px-12">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-500">01 — Serviços</p>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-500">01 — {data.servicesTitle ?? 'Serviços'}</p>
           <h2 className="mt-2 font-serif text-3xl font-bold uppercase tracking-tight text-stone-100">
             O que eu faço
           </h2>

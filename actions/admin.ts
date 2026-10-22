@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminAction } from '@/lib/data'
+import { catalogFor, verticalName } from '@/lib/verticals'
 import { RESERVED_SLUGS } from '@/lib/site'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
@@ -999,4 +1000,74 @@ export async function refundOrderAction(formData: FormData) {
   revalidatePath('/admin/vendas')
   revalidatePath('/admin')
   redirect('/admin/vendas?ok=estornado')
+}
+
+// ============================================================
+// IMPORTAR CATÁLOGO PRONTO (do nicho do espaço)
+// ============================================================
+export async function importCatalogAction(formData: FormData) {
+  const admin = await requireAdminAction()
+  if (!admin) redirect('/entrar?next=/admin/servicos')
+  const { supabase, establishment } = admin
+  if (!establishment) redirect('/admin')
+
+  // nicho: do espaço (herdado da empresa) ou default barbearia
+  let vertical = establishment.vertical ?? 'barbearia'
+  if (!vertical || vertical === 'barbearia') {
+    if (establishment.parent_id) {
+      const { data: parent } = await supabase
+        .from('establishments')
+        .select('vertical')
+        .eq('id', establishment.parent_id)
+        .maybeSingle()
+      const p = parent as { vertical?: string } | null
+      if (p?.vertical) vertical = p.vertical
+    }
+  }
+
+  const catalog = catalogFor(vertical)
+  if (catalog.length === 0) {
+    redirect('/admin/servicos?erro=' + encodeURIComponent('Nenhum catálogo pronto para este nicho.'))
+  }
+
+  // cria os serviços no espaço
+  const { data: inserted, error } = await supabase
+    .from('services')
+    .insert(
+      catalog.map((s) => ({
+        establishment_id: establishment.id,
+        name: s.name,
+        description: s.description,
+        price_cents: parsePriceToCents(s.price) ?? 0,
+        duration_min: s.duration_min,
+        is_active: true,
+      }))
+    )
+    .select('id')
+  if (error) {
+    redirect('/admin/servicos?erro=' + encodeURIComponent(friendlyDbError(error.message)))
+  }
+
+  // vincula todos os novos serviços aos barbeiros do espaço
+  const { data: barbers } = await supabase
+    .from('barbers')
+    .select('id')
+    .eq('establishment_id', establishment.id)
+  const barberIds = ((barbers ?? []) as { id: string }[]).map((b) => b.id)
+  const serviceIds = ((inserted ?? []) as { id: string }[]).map((s) => s.id)
+
+  if (barberIds.length > 0 && serviceIds.length > 0) {
+    const links = barberIds.flatMap((bId) =>
+      serviceIds.map((sId) => ({ barber_id: bId, service_id: sId }))
+    )
+    await supabase.from('barber_services').insert(links)
+  }
+
+  revalidatePath('/admin/servicos')
+  revalidatePath('/servicos')
+  revalidatePath('/agendar')
+  redirect(
+    '/admin/servicos?ok=' +
+      encodeURIComponent(serviceIds.length + ' serviços importados do catálogo ' + verticalName(vertical) + '. Ajuste preços e durações como quiser.')
+  )
 }

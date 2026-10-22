@@ -77,7 +77,7 @@ export default function LandingClassic({ data }: { data: LandingData }) {
 
       {/* ===== SERVIÇOS ===== */}
       <section className="mx-auto max-w-6xl px-4 py-16">
-        <h2 className="section-title text-center">Serviços</h2>
+        <h2 className="section-title text-center">{data.servicesTitle ?? 'Serviços'}</h2>
         <div className="mx-auto mt-3 h-px w-16 bg-amber-500/60" />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {services.map((service) => (

@@ -6,6 +6,7 @@ import { formatBRL, formatDuration, initials } from '@/lib/utils'
 import { nextDays, shortDateLabel, timeInSP } from '@/lib/tz'
 import ConfirmForm from '@/components/booking/confirm-form'
 import { requireKnownHost } from '@/lib/site'
+import { labelsFor } from '@/lib/verticals'
 import type { Barber, Service } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'Agendar' }
@@ -13,8 +14,8 @@ export const metadata: Metadata = { title: 'Agendar' }
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TIME_RE = /^\d{2}:\d{2}$/
 
-function Steps({ current }: { current: number }) {
-  const steps = ['Profissional', 'Serviço', 'Data', 'Horário']
+function Steps({ current, firstLabel }: { current: number; firstLabel: string }) {
+  const steps = [firstLabel, 'Serviço', 'Data', 'Horário']
   return (
     <ol className="mb-10 flex items-center justify-center gap-2 sm:gap-4">
       {steps.map((label, i) => {
@@ -106,6 +107,23 @@ export default async function AgendarPage({
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
 
+  // textos conforme o nicho do negócio (vertical)
+  let verticalKey = 'barbearia'
+  const anchorEst = host.workspace?.establishment ?? host.company ?? null
+  if (anchorEst?.vertical) {
+    verticalKey = anchorEst.vertical
+  } else if (host.workspace?.establishment?.parent_id) {
+    const { data: parent } = await supabase
+      .from('establishments')
+      .select('vertical')
+      .eq('id', host.workspace.establishment.parent_id)
+      .maybeSingle()
+    if ((parent as { vertical?: string } | null)?.vertical) {
+      verticalKey = (parent as { vertical: string }).vertical
+    }
+  }
+  const vLabels = labelsFor(verticalKey)
+
   // ============================================================
   // PASSO 1 — escolher o profissional
   // ============================================================
@@ -162,7 +180,7 @@ export default async function AgendarPage({
         </p>
         {rescheduleBanner}
         <div className="mt-10">
-          <Steps current={1} />
+          <Steps firstLabel={vLabels.professionals.charAt(0).toUpperCase() + vLabels.professionals.slice(1)} current={1} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {professionals.map((barber) => (
               <Link
@@ -267,7 +285,7 @@ export default async function AgendarPage({
         {rescheduleBanner}
 
         <div className="mt-10">
-          <Steps current={2} />
+          <Steps firstLabel={vLabels.professionals.charAt(0).toUpperCase() + vLabels.professionals.slice(1)} current={2} />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {myServices.map((service) => (
               <Link
@@ -348,7 +366,7 @@ export default async function AgendarPage({
         {rescheduleBanner}
 
         <div className="mt-10">
-          <Steps current={dataKey ? 4 : 3} />
+          <Steps firstLabel={vLabels.professionals.charAt(0).toUpperCase() + vLabels.professionals.slice(1)} current={dataKey ? 4 : 3} />
 
           <div className="card grid grid-cols-4 gap-2 p-4 sm:grid-cols-7">
             {days.map((day) => {
@@ -426,7 +444,7 @@ export default async function AgendarPage({
       {rescheduleBanner}
 
       <div className="mt-10">
-        <Steps current={4} />
+        <Steps firstLabel={vLabels.professionals.charAt(0).toUpperCase() + vLabels.professionals.slice(1)} current={4} />
 
         <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
           {/* resumo */}
