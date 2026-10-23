@@ -1,6 +1,8 @@
 import SiteHeader from '@/components/site-header'
 import SiteHeaderMinimal from '@/components/site-header-minimal'
 import SiteFooter from '@/components/site-footer'
+import SellingHeader from '@/components/selling-header'
+import SellingFooter from '@/components/selling-footer'
 import { CartProvider } from '@/components/cart-provider'
 import { getHostContext } from '@/lib/site'
 import type { Establishment } from '@/lib/types'
@@ -30,8 +32,7 @@ export default async function PublicLayout({
 }: { children: React.ReactNode }) {
   const host = await getHostContext()
 
-  // subdomínio configurado que não bate com empresa nem profissional:
-  // não vaza a plataforma
+  // subdomínio desconhecido: não vaza nada
   if (host.sub && !host.workspace && !host.company) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
@@ -39,14 +40,14 @@ export default async function PublicLayout({
         <h1 className="text-lg font-semibold text-stone-200">Site não encontrado</h1>
         <p className="max-w-sm text-sm text-stone-400">
           O endereço <span className="font-mono text-stone-300">{host.sub}</span> não corresponde a
-          nenhum site ativo. Confira o link ou fale com a barbearia.
+          nenhum site ativo.
         </p>
         <a href="/" className="btn btn-primary">Ir para o site principal</a>
       </main>
     )
   }
 
-  // SITE DE UM PROFISSIONAL (subdomínio dele)
+  // SITE DE UM PROFISSIONAL (subdomínio/caminho dele)
   if (host.workspace) {
     const { establishment, barbers } = host.workspace
     return (
@@ -60,7 +61,7 @@ export default async function PublicLayout({
     )
   }
 
-  // SITE DE UMA EMPRESA (subdomínio dela): mesmo shell, sem barbeiro fixo
+  // SITE DE UMA EMPRESA (subdomínio/caminho dela)
   if (host.company) {
     return (
       <CartProvider>
@@ -73,14 +74,13 @@ export default async function PublicLayout({
     )
   }
 
-  // plataforma (domínio principal)
+  // RAIZ DA PLATAFORMA = PÁGINA DE VENDAS
+  // (sem links de marketplace — aqui é onde se vende o sistema)
   return (
-    <CartProvider>
-      <div className="flex min-h-screen flex-col">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
-      </div>
-    </CartProvider>
+    <div className="flex min-h-screen flex-col">
+      <SellingHeader />
+      <main className="flex-1">{children}</main>
+      <SellingFooter />
+    </div>
   )
 }
